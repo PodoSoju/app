@@ -23,15 +23,32 @@ Soju is a next-generation Wine wrapper for macOS, designed specifically for Appl
 
 ## Requirements
 
-- macOS 13.0 (Ventura) or later
-- Apple Silicon (M1, M2, M3, or later)
+- macOS 14.0 (Sonoma) or later
+- Apple Silicon (M1, M2, M3, M4, or later)
+- Xcode 16.0 or later
 
 ## Development
 
 This project is built using:
-- Swift 5.9+
+- Swift 6.0
 - SwiftUI
-- Xcode 15+
+- Xcode 16.0+
+
+### Building the Project
+
+1. Open `Soju.xcodeproj` in Xcode
+2. Select the Soju scheme
+3. Build and run (⌘R)
+
+### Running Tests
+
+SojuKit tests:
+```bash
+cd SojuKit
+swift test
+```
+
+Or run tests from Xcode (⌘U)
 
 ## License
 
