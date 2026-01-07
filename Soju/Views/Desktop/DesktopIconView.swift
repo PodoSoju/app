@@ -16,8 +16,18 @@ struct DesktopIconView: View {
     let onPositionChanged: (CGPoint) -> Void
 
     @State private var isHovered = false
+    @State private var currentPosition: CGPoint
     @State private var dragOffset: CGSize = .zero
     @State private var isDragging = false
+
+    init(icon: DesktopIcon, isSelected: Bool, onTap: @escaping () -> Void, onDoubleTap: @escaping () -> Void, onPositionChanged: @escaping (CGPoint) -> Void) {
+        self.icon = icon
+        self.isSelected = isSelected
+        self.onTap = onTap
+        self.onDoubleTap = onDoubleTap
+        self.onPositionChanged = onPositionChanged
+        self._currentPosition = State(initialValue: icon.position)
+    }
 
     var body: some View {
         VStack(spacing: 4) {
@@ -77,9 +87,12 @@ struct DesktopIconView: View {
 
                     // Calculate new position
                     let newPosition = CGPoint(
-                        x: icon.position.x + value.translation.width,
-                        y: icon.position.y + value.translation.height
+                        x: currentPosition.x + value.translation.width,
+                        y: currentPosition.y + value.translation.height
                     )
+
+                    // Update local position immediately
+                    currentPosition = newPosition
 
                     // Notify parent of position change
                     onPositionChanged(newPosition)
@@ -89,7 +102,13 @@ struct DesktopIconView: View {
                 }
         )
         .opacity(isDragging ? 0.7 : 1.0)
-        .position(icon.position)
+        .position(currentPosition)
+        .onChange(of: icon.position) { oldValue, newValue in
+            // Sync with parent updates
+            if newValue != currentPosition {
+                currentPosition = newValue
+            }
+        }
         .accessibilityLabel("\(icon.name) icon")
         .accessibilityHint("Double tap to open, drag to move")
     }

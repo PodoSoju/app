@@ -35,7 +35,7 @@ struct ContentView: View {
                 }
             }
         }
-        .frame(minWidth: 800, minHeight: 600)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Empty State
@@ -83,9 +83,11 @@ struct ContentView: View {
                 ], spacing: 20) {
                     ForEach(workspaceManager.workspaces) { workspace in
                         WorkspaceCard(workspace: workspace) {
+                            print("DEBUG: Workspace selected - \(workspace.settings.name)")
                             withAnimation {
                                 selectedWorkspace = workspace
                             }
+                            print("DEBUG: selectedWorkspace set to \(String(describing: selectedWorkspace?.settings.name))")
                         }
                     }
                 }
@@ -130,42 +132,42 @@ struct ContentView: View {
 
 // MARK: - Workspace Card
 struct WorkspaceCard: View {
-    @ObservedObject var workspace: Workspace
+    let workspace: Workspace
     let onSelect: () -> Void
 
     @State private var isHovered = false
 
     var body: some View {
-        VStack(spacing: 12) {
-            Image(systemName: workspace.settings.icon)
-                .font(.system(size: 48))
-                .foregroundColor(.accentColor)
+        Button(action: onSelect) {
+            VStack(spacing: 12) {
+                Image(systemName: workspace.settings.icon)
+                    .font(.system(size: 48))
+                    .foregroundColor(.accentColor)
 
-            Text(workspace.settings.name)
-                .font(.headline)
+                Text(workspace.settings.name)
+                    .font(.headline)
 
-            Text(workspace.url.lastPathComponent)
-                .font(.caption)
-                .foregroundColor(.secondary)
+                Text(workspace.url.lastPathComponent)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(24)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(isHovered ? Color.accentColor.opacity(0.1) : Color(nsColor: .controlBackgroundColor))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(
+                        isHovered ? Color.accentColor : Color.gray.opacity(0.3),
+                        lineWidth: 1.5
+                    )
+            )
         }
-        .frame(maxWidth: .infinity)
-        .padding(24)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(isHovered ? Color.accentColor.opacity(0.1) : Color(nsColor: .controlBackgroundColor))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(
-                    isHovered ? Color.accentColor : Color.gray.opacity(0.3),
-                    lineWidth: 1.5
-                )
-        )
+        .buttonStyle(.plain)
         .onHover { hovering in
             isHovered = hovering
-        }
-        .onTapGesture {
-            onSelect()
         }
     }
 }

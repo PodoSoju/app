@@ -20,6 +20,7 @@ struct DesktopView: View {
             ZStack(alignment: .topLeading) {
                 // Background
                 desktopBackground
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .ignoresSafeArea()
 
                 // Desktop Icons Grid
@@ -51,12 +52,14 @@ struct DesktopView: View {
                 //     }
                 // }
             }
-            .frame(width: geometry.size.width, height: geometry.size.height)
+            .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)
+            .clipped()
             .onTapGesture {
                 // Deselect when clicking on empty space
                 selectedIconId = nil
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
             loadWorkspaceIcons()
         }
@@ -96,21 +99,23 @@ struct DesktopView: View {
             .appending(path: "Desktop")
 
         // My Computer
-        loadedIcons.append(DesktopIcon(
+        let myComputerIcon = DesktopIcon(
             name: workspace.settings.name,
             url: workspace.winePrefixURL,
-            position: CGPoint(x: 20, y: 20),
+            position: loadSavedPosition(for: "mycomputer") ?? CGPoint(x: 20, y: 20),
             iconImage: workspace.settings.icon
-        ))
+        )
+        loadedIcons.append(myComputerIcon)
 
         // Desktop folder
         if FileManager.default.fileExists(atPath: desktopPath.path(percentEncoded: false)) {
-            loadedIcons.append(DesktopIcon(
+            let desktopIcon = DesktopIcon(
                 name: "Desktop",
                 url: desktopPath,
-                position: CGPoint(x: 20, y: 120),
+                position: loadSavedPosition(for: "desktop") ?? CGPoint(x: 20, y: 120),
                 iconImage: "folder.fill"
-            ))
+            )
+            loadedIcons.append(desktopIcon)
         }
 
         // Documents
@@ -120,12 +125,13 @@ struct DesktopView: View {
             .appending(path: "Documents")
 
         if FileManager.default.fileExists(atPath: documentsPath.path(percentEncoded: false)) {
-            loadedIcons.append(DesktopIcon(
+            let documentsIcon = DesktopIcon(
                 name: "Documents",
                 url: documentsPath,
-                position: CGPoint(x: 20, y: 220),
+                position: loadSavedPosition(for: "documents") ?? CGPoint(x: 20, y: 220),
                 iconImage: "doc.fill"
-            ))
+            )
+            loadedIcons.append(documentsIcon)
         }
 
         icons = loadedIcons
@@ -176,13 +182,33 @@ struct DesktopView: View {
     private func handleIconPositionChanged(_ icon: DesktopIcon, newPosition: CGPoint) {
         // Update icon position in array
         if let index = icons.firstIndex(where: { $0.id == icon.id }) {
-            icons[index].position = newPosition
-        }
+            var updatedIcon = icons[index]
+            updatedIcon.position = newPosition
+            icons[index] = updatedIcon
 
-        // Save position to UserDefaults
-        let key = "icon_\(icon.name)_position"
-        let positionData = ["x": newPosition.x, "y": newPosition.y]
-        UserDefaults.standard.set(positionData, forKey: key)
+            // Save position to UserDefaults using stable identifier
+            let identifier = getIconIdentifier(icon)
+            let key = "icon_\(identifier)_position"
+            let positionData = ["x": newPosition.x, "y": newPosition.y]
+            UserDefaults.standard.set(positionData, forKey: key)
+
+            print("Icon \(icon.name) moved to: \(newPosition)")
+        }
+    }
+
+    private func getIconIdentifier(_ icon: DesktopIcon) -> String {
+        // Use stable identifier based on URL path
+        let pathComponents = icon.url.pathComponents
+        if pathComponents.contains("Desktop") {
+            return "desktop"
+        } else if pathComponents.contains("Documents") {
+            return "documents"
+        } else if icon.url == workspace.winePrefixURL {
+            return "mycomputer"
+        } else {
+            // For executables or custom icons, use name
+            return icon.name.lowercased().replacingOccurrences(of: " ", with: "_")
+        }
     }
 
     private func handleDroppedExecutables(_ urls: [URL], in size: CGSize) -> Bool {
