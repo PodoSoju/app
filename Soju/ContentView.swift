@@ -89,6 +89,10 @@ struct ContentView: View {
                     ForEach(workspaceManager.workspaces) { workspace in
                         WorkspaceCard(workspace: workspace) {
                             Logger.sojuKit.logWithFile("📂 Workspace selected: \(workspace.settings.name)", level: .info)
+
+                            // Sync with WorkspaceManager for Wine environment setup
+                            workspaceManager.selectWorkspace(workspace)
+
                             withAnimation {
                                 selectedWorkspace = workspace
                             }
@@ -146,39 +150,38 @@ struct WorkspaceCard: View {
     let onSelect: () -> Void
 
     var body: some View {
-        Button(action: {
+        VStack(spacing: 12) {
+            Image(systemName: workspace.settings.icon)
+                .font(.system(size: 48))
+                .foregroundColor(.blue)
+
+            Text(workspace.settings.name)
+                .font(.headline)
+                .multilineTextAlignment(.center)
+
+            Text(workspace.url.lastPathComponent)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(minWidth: 200, minHeight: 150)
+        .frame(maxWidth: .infinity)
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(nsColor: .controlBackgroundColor))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.blue, lineWidth: 1)
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
             Logger.sojuKit.logWithFile("🖱️ Workspace clicked: \(workspace.settings.name)", level: .info)
             Logger.sojuKit.logWithFile("📂 Entering workspace...", level: .debug)
             onSelect()
             Logger.sojuKit.logWithFile("✅ onSelect() called", level: .debug)
-        }) {
-            VStack(spacing: 12) {
-                Image(systemName: workspace.settings.icon)
-                    .font(.system(size: 48))
-                    .foregroundColor(.blue)
-
-                Text(workspace.settings.name)
-                    .font(.headline)
-                    .multilineTextAlignment(.center)
-
-                Text(workspace.url.lastPathComponent)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-            .frame(minWidth: 200, minHeight: 150)
-            .frame(maxWidth: .infinity)
-            .padding()
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(nsColor: .controlBackgroundColor))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.blue, lineWidth: 1)
-            )
         }
-        .buttonStyle(.plain)
     }
 }
 
