@@ -17,11 +17,11 @@ extension Logger {
 
     // MARK: - File Logging
 
-    /// Log file URL in ~/Library/Logs/Soju/soju.log
+    /// Log file URL in app container
     public static let logFileURL: URL = {
-        let logsDir = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Logs")
-            .appendingPathComponent("Soju")
+        // Use app container for Sandbox compatibility
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        let logsDir = appSupport.appendingPathComponent("Soju").appendingPathComponent("Logs")
 
         // Create directory if it doesn't exist
         try? FileManager.default.createDirectory(at: logsDir, withIntermediateDirectories: true)

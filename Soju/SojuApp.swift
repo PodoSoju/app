@@ -6,13 +6,24 @@
 //
 
 import SwiftUI
+import SojuKit
+import os.log
 
 @main
 struct SojuApp: App {
+    init() {
+        // Log app launch to file
+        Logger.sojuKit.logWithFile("🍶 Soju app launched", level: .info)
+        Logger.sojuKit.logWithFile("📋 Log file location: \(Logger.logFileURL.path)", level: .info)
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .frame(minWidth: 800, minHeight: 600)
+                .onAppear {
+                    Logger.sojuKit.logWithFile("🪟 Main window appeared", level: .info)
+                }
         }
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)

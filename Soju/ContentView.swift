@@ -88,11 +88,11 @@ struct ContentView: View {
                 ) {
                     ForEach(workspaceManager.workspaces) { workspace in
                         WorkspaceCard(workspace: workspace) {
-                            Logger.sojuKit.info("Workspace selected - \(workspace.settings.name)")
+                            Logger.sojuKit.logWithFile("📂 Workspace selected: \(workspace.settings.name)", level: .info)
                             withAnimation {
                                 selectedWorkspace = workspace
                             }
-                            Logger.sojuKit.debug("selectedWorkspace set to \(String(describing: selectedWorkspace?.settings.name))")
+                            Logger.sojuKit.logWithFile("✅ Entered workspace: \(workspace.settings.name)", level: .debug)
                         }
                         .frame(minWidth: 200, maxWidth: 300)
                     }
@@ -145,62 +145,40 @@ struct WorkspaceCard: View {
     let workspace: Workspace
     let onSelect: () -> Void
 
-    @State private var isHovered = false
-    @State private var isSelected = false
-
     var body: some View {
-        VStack(spacing: 12) {
-            Image(systemName: workspace.settings.icon)
-                .font(.system(size: 48))
-                .foregroundColor(.accentColor)
+        Button(action: {
+            Logger.sojuKit.logWithFile("🖱️ Workspace clicked: \(workspace.settings.name)", level: .info)
+            Logger.sojuKit.logWithFile("📂 Entering workspace...", level: .debug)
+            onSelect()
+            Logger.sojuKit.logWithFile("✅ onSelect() called", level: .debug)
+        }) {
+            VStack(spacing: 12) {
+                Image(systemName: workspace.settings.icon)
+                    .font(.system(size: 48))
+                    .foregroundColor(.blue)
 
-            Text(workspace.settings.name)
-                .font(.headline)
-                .lineLimit(1)
+                Text(workspace.settings.name)
+                    .font(.headline)
+                    .multilineTextAlignment(.center)
 
-            Text(workspace.url.lastPathComponent)
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .lineLimit(1)
+                Text(workspace.url.lastPathComponent)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .frame(minWidth: 200, minHeight: 150)
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(nsColor: .controlBackgroundColor))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.blue, lineWidth: 1)
+            )
         }
-        .frame(maxWidth: .infinity, minHeight: 150)
-        .padding(24)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(isSelected ? Color.accentColor.opacity(0.2) :
-                      isHovered ? Color.accentColor.opacity(0.1) :
-                      Color(nsColor: .controlBackgroundColor))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(
-                    isSelected ? Color.accentColor :
-                    isHovered ? Color.accentColor :
-                    Color.gray.opacity(0.3),
-                    lineWidth: isSelected ? 2 : 1.5
-                )
-        )
-        .contentShape(Rectangle())
-        .simultaneousGesture(
-            TapGesture(count: 2)
-                .onEnded { _ in
-                    Logger.sojuKit.info("Double-click: Entering workspace '\(workspace.settings.name)'")
-                    onSelect()
-                }
-        )
-        .simultaneousGesture(
-            TapGesture(count: 1)
-                .onEnded { _ in
-                    Logger.sojuKit.debug("Single-click: Toggling selection for '\(workspace.settings.name)'")
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        isSelected.toggle()
-                    }
-                }
-        )
-        .onHover { hovering in
-            isHovered = hovering
-        }
-        .aspectRatio(1.5, contentMode: .fit)
+        .buttonStyle(.plain)
     }
 }
 
