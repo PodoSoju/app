@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SojuKit
+import os.log
 
 /// Main desktop view mimicking Windows desktop UX
 struct DesktopView: View {
@@ -142,7 +143,7 @@ struct DesktopView: View {
     }
 
     private func handleIconDoubleTap(_ icon: DesktopIcon) {
-        print("Opening: \(icon.name) at \(icon.url.path)")
+        Logger.sojuKit.logWithFile("Opening icon: \(icon.name) at \(icon.url.path)", level: .info)
 
         // Check if it's a Windows executable
         if icon.url.pathExtension.lowercased() == "exe" {
@@ -155,6 +156,7 @@ struct DesktopView: View {
 
             Task {
                 do {
+                    Logger.sojuKit.logWithFile("Starting program: \(icon.name)", level: .info)
                     // Add to workspace's running programs
                     await MainActor.run {
                         workspace.programs.append(program)
@@ -163,9 +165,9 @@ struct DesktopView: View {
                     // Execute the program
                     try await program.run(in: workspace)
 
-                    print("Program \(icon.name) completed")
+                    Logger.sojuKit.logWithFile("Program \(icon.name) completed successfully", level: .info)
                 } catch {
-                    print("Failed to run program \(icon.name): \(error)")
+                    Logger.sojuKit.logWithFile("Failed to run program \(icon.name): \(error)", level: .error)
 
                     // Remove from running programs on error
                     await MainActor.run {
@@ -175,6 +177,7 @@ struct DesktopView: View {
             }
         } else {
             // Open folders and other files with Finder
+            Logger.sojuKit.logWithFile("Opening \(icon.name) with Finder", level: .debug)
             NSWorkspace.shared.open(icon.url)
         }
     }
@@ -192,7 +195,7 @@ struct DesktopView: View {
             let positionData = ["x": newPosition.x, "y": newPosition.y]
             UserDefaults.standard.set(positionData, forKey: key)
 
-            print("Icon \(icon.name) moved to: \(newPosition)")
+            Logger.sojuKit.logWithFile("Icon \(icon.name) moved to: \(newPosition)", level: .debug)
         }
     }
 
@@ -212,6 +215,7 @@ struct DesktopView: View {
     }
 
     private func handleDroppedExecutables(_ urls: [URL], in size: CGSize) -> Bool {
+        Logger.sojuKit.logWithFile("Dropped \(urls.count) executables onto desktop", level: .info)
         var newIcons: [DesktopIcon] = []
 
         // Calculate next available position
@@ -224,6 +228,7 @@ struct DesktopView: View {
         }
 
         for url in urls {
+            Logger.sojuKit.logWithFile("Adding executable to desktop: \(url.lastPathComponent)", level: .debug)
             // Create Program and add to workspace
             let program = Program(
                 name: url.deletingPathExtension().lastPathComponent,

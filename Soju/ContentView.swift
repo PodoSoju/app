@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SojuKit
+import os.log
 
 struct ContentView: View {
     @StateObject private var workspaceManager = WorkspaceManager.shared
@@ -78,21 +79,29 @@ struct ContentView: View {
                 .font(.largeTitle)
 
             ScrollView {
-                LazyVGrid(columns: [
-                    GridItem(.adaptive(minimum: 200, maximum: 300), spacing: 20)
-                ], spacing: 20) {
+                LazyVGrid(
+                    columns: [
+                        GridItem(.adaptive(minimum: 200, maximum: 300), spacing: 20, alignment: .top)
+                    ],
+                    alignment: .center,
+                    spacing: 20
+                ) {
                     ForEach(workspaceManager.workspaces) { workspace in
                         WorkspaceCard(workspace: workspace) {
-                            print("DEBUG: Workspace selected - \(workspace.settings.name)")
+                            Logger.sojuKit.info("Workspace selected - \(workspace.settings.name)")
                             withAnimation {
                                 selectedWorkspace = workspace
                             }
-                            print("DEBUG: selectedWorkspace set to \(String(describing: selectedWorkspace?.settings.name))")
+                            Logger.sojuKit.debug("selectedWorkspace set to \(String(describing: selectedWorkspace?.settings.name))")
                         }
+                        .frame(minWidth: 200, maxWidth: 300)
                     }
                 }
-                .padding()
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 40)
+                .padding(.vertical, 20)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             Button("Back") {
                 // TODO: Go back to main menu
@@ -100,6 +109,7 @@ struct ContentView: View {
             }
             .buttonStyle(.bordered)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding()
     }
 
@@ -136,39 +146,61 @@ struct WorkspaceCard: View {
     let onSelect: () -> Void
 
     @State private var isHovered = false
+    @State private var isSelected = false
 
     var body: some View {
-        Button(action: onSelect) {
-            VStack(spacing: 12) {
-                Image(systemName: workspace.settings.icon)
-                    .font(.system(size: 48))
-                    .foregroundColor(.accentColor)
+        VStack(spacing: 12) {
+            Image(systemName: workspace.settings.icon)
+                .font(.system(size: 48))
+                .foregroundColor(.accentColor)
 
-                Text(workspace.settings.name)
-                    .font(.headline)
+            Text(workspace.settings.name)
+                .font(.headline)
+                .lineLimit(1)
 
-                Text(workspace.url.lastPathComponent)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(24)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(isHovered ? Color.accentColor.opacity(0.1) : Color(nsColor: .controlBackgroundColor))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .strokeBorder(
-                        isHovered ? Color.accentColor : Color.gray.opacity(0.3),
-                        lineWidth: 1.5
-                    )
-            )
+            Text(workspace.url.lastPathComponent)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .lineLimit(1)
         }
-        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity, minHeight: 150)
+        .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(isSelected ? Color.accentColor.opacity(0.2) :
+                      isHovered ? Color.accentColor.opacity(0.1) :
+                      Color(nsColor: .controlBackgroundColor))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(
+                    isSelected ? Color.accentColor :
+                    isHovered ? Color.accentColor :
+                    Color.gray.opacity(0.3),
+                    lineWidth: isSelected ? 2 : 1.5
+                )
+        )
+        .contentShape(Rectangle())
+        .simultaneousGesture(
+            TapGesture(count: 2)
+                .onEnded { _ in
+                    Logger.sojuKit.info("Double-click: Entering workspace '\(workspace.settings.name)'")
+                    onSelect()
+                }
+        )
+        .simultaneousGesture(
+            TapGesture(count: 1)
+                .onEnded { _ in
+                    Logger.sojuKit.debug("Single-click: Toggling selection for '\(workspace.settings.name)'")
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isSelected.toggle()
+                    }
+                }
+        )
         .onHover { hovering in
             isHovered = hovering
         }
+        .aspectRatio(1.5, contentMode: .fit)
     }
 }
 
