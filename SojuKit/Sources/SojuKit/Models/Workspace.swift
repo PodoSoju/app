@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+import AppKit
 import os.log
 
 public final class Workspace: ObservableObject, Equatable, Hashable, Identifiable, Comparable {
@@ -115,17 +116,97 @@ public final class Workspace: ObservableObject, Equatable, Hashable, Identifiabl
     }
 }
 
-// MARK: - Program (Placeholder)
+// MARK: - Program
 
-/// Placeholder for Program model (to be implemented)
-public struct Program: Identifiable, Hashable {
+/// Represents a Windows program that can be executed in a workspace
+@MainActor
+public class Program: Identifiable, Hashable, ObservableObject {
     public let id: UUID
     public let name: String
-    public let url: URL
+    public let url: URL // Path to .exe file
+    public let icon: NSImage?
 
-    public init(id: UUID = UUID(), name: String, url: URL) {
+    /// Whether the program is currently running
+    @Published public private(set) var isRunning: Bool = false
+
+    /// Process output stream
+    @Published public private(set) var output: [String] = []
+
+    /// Process exit code (nil if still running)
+    @Published public private(set) var exitCode: Int32?
+
+    public init(id: UUID = UUID(), name: String, url: URL, icon: NSImage? = nil) {
         self.id = id
         self.name = name
         self.url = url
+        self.icon = icon
+    }
+
+    /// Run this program in the specified workspace
+    public func run(in workspace: Workspace) async throws {
+        guard !isRunning else {
+            Logger.sojuKit.warning("Program \(self.name) is already running")
+            return
+        }
+
+        await MainActor.run {
+            self.isRunning = true
+            self.exitCode = nil
+            self.output = []
+        }
+
+        Logger.sojuKit.info("Starting program: \(self.name) at \(self.url.path)")
+
+        do {
+            let podoSoju = PodoSojuManager.shared
+
+            for await processOutput in try podoSoju.runWine(
+                args: ["start", "/unix", self.url.path(percentEncoded: false)],
+                workspace: workspace
+            ) {
+                switch processOutput {
+                case .message(let message):
+                    await MainActor.run {
+                        self.output.append(message)
+                    }
+                case .error(let error):
+                    await MainActor.run {
+                        self.output.append("ERROR: \(error)")
+                    }
+                case .terminated(let code):
+                    await MainActor.run {
+                        self.isRunning = false
+                        self.exitCode = code
+                    }
+                    if code == 0 {
+                        Logger.sojuKit.info("Program \(self.name) completed successfully")
+                    } else {
+                        Logger.sojuKit.error("Program \(self.name) exited with code \(code)")
+                    }
+                case .started:
+                    Logger.sojuKit.info("Program \(self.name) started")
+                }
+            }
+        } catch {
+            await MainActor.run {
+                self.isRunning = false
+                self.exitCode = 1
+            }
+
+            Logger.sojuKit.error("Program \(self.name) failed: \(error.localizedDescription)")
+            throw error
+        }
+    }
+
+    // MARK: - Equatable
+
+    nonisolated public static func == (lhs: Program, rhs: Program) -> Bool {
+        return lhs.id == rhs.id
+    }
+
+    // MARK: - Hashable
+
+    nonisolated public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
     }
 }

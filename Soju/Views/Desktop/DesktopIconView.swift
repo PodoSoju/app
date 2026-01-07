@@ -13,8 +13,11 @@ struct DesktopIconView: View {
     let isSelected: Bool
     let onTap: () -> Void
     let onDoubleTap: () -> Void
+    let onPositionChanged: (CGPoint) -> Void
 
     @State private var isHovered = false
+    @State private var dragOffset: CGSize = .zero
+    @State private var isDragging = false
 
     var body: some View {
         VStack(spacing: 4) {
@@ -62,7 +65,33 @@ struct DesktopIconView: View {
         .onHover { hovering in
             isHovered = hovering
         }
+        .offset(dragOffset)
+        .gesture(
+            DragGesture()
+                .onChanged { value in
+                    isDragging = true
+                    dragOffset = value.translation
+                }
+                .onEnded { value in
+                    isDragging = false
+
+                    // Calculate new position
+                    let newPosition = CGPoint(
+                        x: icon.position.x + value.translation.width,
+                        y: icon.position.y + value.translation.height
+                    )
+
+                    // Notify parent of position change
+                    onPositionChanged(newPosition)
+
+                    // Reset offset
+                    dragOffset = .zero
+                }
+        )
+        .opacity(isDragging ? 0.7 : 1.0)
         .position(icon.position)
+        .accessibilityLabel("\(icon.name) icon")
+        .accessibilityHint("Double tap to open, drag to move")
     }
 }
 
@@ -75,7 +104,8 @@ struct DesktopIconView: View {
             icon: DesktopIcon.sampleIcons[0],
             isSelected: false,
             onTap: {},
-            onDoubleTap: {}
+            onDoubleTap: {},
+            onPositionChanged: { _ in }
         )
     }
     .frame(width: 400, height: 300)
@@ -90,7 +120,8 @@ struct DesktopIconView: View {
             icon: DesktopIcon.sampleIcons[1],
             isSelected: true,
             onTap: {},
-            onDoubleTap: {}
+            onDoubleTap: {},
+            onPositionChanged: { _ in }
         )
     }
     .frame(width: 400, height: 300)
