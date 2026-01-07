@@ -11,6 +11,8 @@ import SojuKit
 struct ContentView: View {
     @StateObject private var workspaceManager = WorkspaceManager.shared
     @State private var selectedWorkspace: Workspace?
+    @State private var isCreatingWorkspace = false
+    @State private var errorMessage: String?
 
     var body: some View {
         Group {
@@ -51,11 +53,20 @@ struct ContentView: View {
                 .font(.subheadline)
                 .foregroundColor(.secondary)
 
-            Button("Create Workspace") {
-                // TODO: Implement workspace creation
-                print("Create workspace")
+            if let errorMessage = errorMessage {
+                Text(errorMessage)
+                    .font(.caption)
+                    .foregroundColor(.red)
+                    .padding(.horizontal)
+            }
+
+            Button(isCreatingWorkspace ? "Creating..." : "Create Workspace") {
+                Task {
+                    await createFirstWorkspace()
+                }
             }
             .buttonStyle(.borderedProminent)
+            .disabled(isCreatingWorkspace)
         }
         .padding()
     }
@@ -88,6 +99,32 @@ struct ContentView: View {
             .buttonStyle(.bordered)
         }
         .padding()
+    }
+
+    // MARK: - Actions
+
+    private func createFirstWorkspace() async {
+        isCreatingWorkspace = true
+        errorMessage = nil
+
+        do {
+            let workspace = try await workspaceManager.createWorkspace(
+                name: "My Workspace",
+                icon: "desktopcomputer",
+                windowsVersion: .win10
+            )
+
+            // After creation, select the workspace
+            await MainActor.run {
+                selectedWorkspace = workspace
+                isCreatingWorkspace = false
+            }
+        } catch {
+            await MainActor.run {
+                errorMessage = "Failed to create workspace: \(error.localizedDescription)"
+                isCreatingWorkspace = false
+            }
+        }
     }
 }
 
