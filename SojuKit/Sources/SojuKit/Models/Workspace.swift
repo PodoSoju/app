@@ -148,76 +148,46 @@ public final class Workspace: ObservableObject, Equatable, Hashable, Identifiabl
         Logger.sojuKit.info("Unregistered running program: \(url.lastPathComponent)", category: "Workspace")
     }
 
-    /// Focus an existing Wine window for the program using Accessibility API
-    /// - Parameter url: Program URL
+    /// Focus an existing Wine window using Accessibility API
+    /// - Parameter url: Program URL (unused, focuses any Wine window)
     /// - Returns: true if window was focused, false if not found
     @MainActor
     public func focusRunningProgram(_ url: URL) -> Bool {
-        let exeName = url.deletingPathExtension().lastPathComponent.lowercased()
-        Logger.sojuKit.debug("Trying to focus window for: \(exeName)", category: "Workspace")
+        Logger.sojuKit.logWithFile("🔍 focusRunningProgram called", level: .info)
 
         // Wine 프로세스 찾기
         let wineApps = NSWorkspace.shared.runningApplications.filter {
             $0.localizedName?.lowercased() == "wine"
         }
+        Logger.sojuKit.logWithFile("🔍 Wine apps found: \(wineApps.count)", level: .info)
 
-        guard !wineApps.isEmpty else {
-            Logger.sojuKit.debug("No Wine processes found", category: "Workspace")
-            return false
-        }
-
-        // 각 Wine 프로세스의 창 검색
+        // 첫 번째 Wine 창 포커스
         for app in wineApps {
             let pid = app.processIdentifier
             let axApp = AXUIElementCreateApplication(pid)
 
-            // 창 목록 가져오기
             var windowsRef: CFTypeRef?
             let result = AXUIElementCopyAttributeValue(axApp, kAXWindowsAttribute as CFString, &windowsRef)
+            Logger.sojuKit.logWithFile("🔍 PID \(pid): AX result = \(result.rawValue)", level: .info)
 
-            guard result == .success, let windows = windowsRef as? [AXUIElement] else {
-                continue
-            }
+            if result == .success, let windows = windowsRef as? [AXUIElement], !windows.isEmpty {
+                Logger.sojuKit.logWithFile("🔍 Found \(windows.count) windows", level: .info)
 
-            // 창 제목에서 exeName 찾기
-            for window in windows {
-                var titleRef: CFTypeRef?
-                AXUIElementCopyAttributeValue(window, kAXTitleAttribute as CFString, &titleRef)
-                let title = (titleRef as? String)?.lowercased() ?? ""
-
-                // 창 제목에 프로그램 이름이 포함되어 있는지 확인
-                if title.contains(exeName) || exeName.contains("netfile") && title.contains("넷파일") {
-                    // 창 활성화 (AXRaise)
+                // 모든 창 활성화
+                for window in windows {
                     let raiseResult = AXUIElementPerformAction(window, kAXRaiseAction as CFString)
-
-                    // 앱을 frontmost로 설정
-                    AXUIElementSetAttributeValue(axApp, kAXFrontmostAttribute as CFString, true as CFTypeRef)
-
-                    if raiseResult == .success {
-                        Logger.sojuKit.info("Successfully focused window: \(title) (PID: \(pid))", category: "Workspace")
-                        return true
-                    }
+                    Logger.sojuKit.logWithFile("🔍 AXRaise result: \(raiseResult.rawValue)", level: .info)
                 }
-            }
-        }
-
-        // 창 제목으로 못 찾으면 첫 번째 Wine 창이라도 활성화
-        for app in wineApps {
-            let pid = app.processIdentifier
-            let axApp = AXUIElementCreateApplication(pid)
-
-            var windowsRef: CFTypeRef?
-            let result = AXUIElementCopyAttributeValue(axApp, kAXWindowsAttribute as CFString, &windowsRef)
-
-            if result == .success, let windows = windowsRef as? [AXUIElement], let firstWindow = windows.first {
-                AXUIElementPerformAction(firstWindow, kAXRaiseAction as CFString)
                 AXUIElementSetAttributeValue(axApp, kAXFrontmostAttribute as CFString, true as CFTypeRef)
-                Logger.sojuKit.info("Focused first available Wine window (PID: \(pid))", category: "Workspace")
+
+                // NSRunningApplication으로도 activate
+                app.activate()
+                Logger.sojuKit.logWithFile("✅ Focused Wine windows (PID: \(pid))", level: .info)
                 return true
             }
         }
 
-        Logger.sojuKit.debug("No Wine windows found to focus", category: "Workspace")
+        Logger.sojuKit.logWithFile("❌ No Wine windows found", level: .info)
         return false
     }
 

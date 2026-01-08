@@ -154,19 +154,22 @@ struct ShortcutView: View {
                 Logger.sojuKit.logWithFile("Program started: \(shortcut.name)", level: .info)
 
                 // Wine 창이 뜰 때까지 대기 후 포커스 (최대 15초, 1초 간격)
+                Logger.sojuKit.logWithFile("⏳ Starting focus loop...", level: .info)
                 for attempt in 1...15 {
                     try await Task.sleep(nanoseconds: 1_000_000_000)
+                    Logger.sojuKit.logWithFile("⏳ Attempt \(attempt)/15", level: .info)
                     let focused = await MainActor.run {
                         workspace.focusRunningProgram(shortcut.url)
                     }
+                    Logger.sojuKit.logWithFile("⏳ Focus result: \(focused)", level: .info)
                     if focused {
-                        Logger.sojuKit.logWithFile("Auto-focused after \(attempt)s", level: .info)
+                        Logger.sojuKit.logWithFile("✅ Auto-focused after \(attempt)s", level: .info)
                         await MainActor.run { isLoading = false }
                         return  // 성공하면 바로 종료
                     }
                 }
                 // 타임아웃 - 창 못 찾음
-                Logger.sojuKit.logWithFile("Timeout waiting for window", level: .info)
+                Logger.sojuKit.logWithFile("❌ Timeout waiting for window", level: .info)
             } catch {
                 await MainActor.run {
                     errorMessage = error.localizedDescription
