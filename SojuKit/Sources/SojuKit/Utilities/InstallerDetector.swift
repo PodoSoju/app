@@ -38,12 +38,16 @@ public struct InstallerDetector {
     /// Keywords that indicate an uninstaller file (case-insensitive)
     private static let excludeKeywords = ["uninstall", "unins"]
 
-    /// Wine stub programs (empty shells that don't do anything useful)
-    private static let wineStubPrograms: Set<String> = [
-        "wmplayer", "wordpad", "notepad", "regedit", "winecfg",
-        "explorer", "iexplore", "winefile", "winemine", "winhelp",
-        "cmd", "control", "taskmgr", "msiexec", "regsvr32"
+    /// Wine system paths that typically contain stub programs
+    private static let wineSystemPaths = [
+        "windows/system32",
+        "Windows Media Player",
+        "Internet Explorer",
+        "windows/command"
     ]
+
+    /// Maximum file size for Wine stub detection (50KB)
+    private static let wineStubMaxSize: Int64 = 50_000
 
     /// Known installer signatures detected by `file` command
     private static let installerSignatures = [
@@ -92,29 +96,67 @@ public struct InstallerDetector {
     /// Wine stub programs are placeholder executables that either do nothing
     /// or provide minimal functionality. These are not useful to display as shortcuts.
     ///
+    /// Detection strategy:
+    /// 1. Only check `.exe` files
+    /// 2. File must be small (< 50KB)
+    /// 3. File must be in a Wine system path
+    /// 4. File content must contain "stub" string
+    ///
     /// - Parameter url: The file URL to check
-    /// - Returns: `true` if the file is a known Wine stub program, `false` otherwise
+    /// - Returns: `true` if the file is detected as a Wine stub program, `false` otherwise
     ///
     /// # Example
     /// ```swift
-    /// let wmplayerUrl = URL(fileURLWithPath: "/Programs/wmplayer.exe")
-    /// InstallerDetector.isWineStub(wmplayerUrl) // true
+    /// // Wine stub in system32
+    /// let wmplayerUrl = URL(fileURLWithPath: "/prefix/drive_c/windows/system32/wmplayer.exe")
+    /// InstallerDetector.isWineStub(wmplayerUrl) // true (if small and contains "stub")
     ///
     /// let gameUrl = URL(fileURLWithPath: "/Programs/MyGame.exe")
     /// InstallerDetector.isWineStub(gameUrl) // false
     /// ```
     public static func isWineStub(_ url: URL) -> Bool {
-        let name = url.deletingPathExtension().lastPathComponent.lowercased()
-        let isStub = wineStubPrograms.contains(name)
+        // 1. Only check exe files
+        guard url.pathExtension.lowercased() == "exe" else {
+            return false
+        }
 
-        if isStub {
+        // 2. Check file size - must be under 50KB
+        guard let attrs = try? FileManager.default.attributesOfItem(atPath: url.path),
+              let size = attrs[.size] as? Int64,
+              size < wineStubMaxSize else {
+            return false
+        }
+
+        // 3. Check if in Wine system path
+        let pathLower = url.path.lowercased()
+        let isWinePath = wineSystemPaths.contains { pathLower.contains($0.lowercased()) }
+
+        guard isWinePath else {
+            return false
+        }
+
+        // 4. Check file content for "stub" byte pattern
+        guard let data = try? Data(contentsOf: url, options: .mappedIfSafe) else {
             Logger.sojuKit.debug(
-                "File '\(url.lastPathComponent)' is a Wine stub program",
+                "Could not read file content: \(url.lastPathComponent)",
+                category: "InstallerDetector"
+            )
+            return false
+        }
+
+        // Search for "stub" byte pattern in binary data
+        let stubPattern = "stub".data(using: .ascii)!
+        let stubPatternUpper = "STUB".data(using: .ascii)!
+        let containsStub = data.range(of: stubPattern) != nil || data.range(of: stubPatternUpper) != nil
+
+        if containsStub {
+            Logger.sojuKit.debug(
+                "File '\(url.lastPathComponent)' is a Wine stub program (size: \(size) bytes)",
                 category: "InstallerDetector"
             )
         }
 
-        return isStub
+        return containsStub
     }
 
     /// Determines if the given file URL points to an installer executable

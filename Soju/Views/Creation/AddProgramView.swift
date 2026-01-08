@@ -43,6 +43,9 @@ struct AddProgramView: View {
     @State private var showInstallationProgress = false
     @State private var installerProgram: Program?
 
+    // Wine stub warning
+    @State private var showStubWarning = false
+
     var body: some View {
         NavigationStack {
             if selectedMode == nil {
@@ -75,6 +78,11 @@ struct AddProgramView: View {
                     }
                 )
             }
+        }
+        .alert("Cannot Add", isPresented: $showStubWarning) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("This program is a Wine system file. It does not actually work.")
         }
     }
 
@@ -274,6 +282,15 @@ struct AddProgramView: View {
         panel.begin { response in
             if response == .OK, let url = panel.url {
                 Logger.sojuKit.info("Selected executable: \(url.lastPathComponent)", category: "UI")
+
+                // Check if Wine stub and block selection
+                if InstallerDetector.isWineStub(url) {
+                    Logger.sojuKit.warning("Wine stub detected, blocking selection: \(url.lastPathComponent)", category: "UI")
+                    showStubWarning = true
+                    selectedFileURL = nil
+                    return
+                }
+
                 selectedFileURL = url
 
                 // Check if installer and update state
