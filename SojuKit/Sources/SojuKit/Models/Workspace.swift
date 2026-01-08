@@ -17,7 +17,7 @@ public final class Workspace: ObservableObject, Equatable, Hashable, Identifiabl
     public let url: URL
 
     /// Metadata file URL
-    private let metadataURL: URL
+    public let metadataURL: URL
 
     /// Workspace settings
     @Published public var settings: WorkspaceSettings {
@@ -223,3 +223,17 @@ public class Program: Identifiable, Hashable, ObservableObject {
         hasher.combine(id)
     }
 }
+
+// MARK: - Preview Support
+
+#if DEBUG
+extension Workspace {
+    public static var preview: Workspace {
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("PreviewWorkspace")
+        let workspace = Workspace(workspaceUrl: tempURL, isRunning: false, isAvailable: true)
+        workspace.settings.name = "Preview Workspace"
+        workspace.settings.icon = "desktopcomputer"
+        return workspace
+    }
+}
+#endif

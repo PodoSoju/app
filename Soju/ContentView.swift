@@ -22,15 +22,15 @@ struct ContentView: View {
                 // No workspaces available
                 emptyStateView
             } else if workspaceManager.workspaces.count == 1 {
-                // Single workspace - go directly to desktop
-                DesktopView(workspace: workspaceManager.workspaces[0])
+                // Single workspace - go directly to shortcuts grid
+                ShortcutsGridView(workspace: workspaceManager.workspaces[0])
                     .onAppear {
                         selectedWorkspace = workspaceManager.workspaces.first
                     }
             } else {
                 // Multiple workspaces - show selection screen
                 if let workspace = selectedWorkspace {
-                    DesktopView(workspace: workspace)
+                    ShortcutsGridView(workspace: workspace)
                         .transition(.opacity)
                 } else {
                     workspaceSelectionView
