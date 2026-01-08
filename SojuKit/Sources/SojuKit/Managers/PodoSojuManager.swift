@@ -409,6 +409,23 @@ public final class PodoSojuManager: @unchecked Sendable {
             }
         }
 
+        // PodoSoju fonts 경로
+        let podoSojuFonts = podoSojuRoot.appending(path: "share/wine/fonts")
+
+        // msyh.ttf (Microsoft YaHei - Wine 기본 폰트, FontLink에서 참조됨)
+        let msyhSource = podoSojuFonts.appending(path: "msyh.ttf")
+        let msyhDest = fontsDest.appending(path: "msyh.ttf")
+        if FileManager.default.fileExists(atPath: msyhSource.path) &&
+           !FileManager.default.fileExists(atPath: msyhDest.path) {
+            do {
+                try FileManager.default.copyItem(at: msyhSource, to: msyhDest)
+                installedCount += 1
+                Logger.sojuKit.info("Installed msyh.ttf from PodoSoju", category: "PodoSoju")
+            } catch {
+                Logger.sojuKit.warning("Failed to copy msyh.ttf: \(error.localizedDescription)", category: "PodoSoju")
+            }
+        }
+
         if installedCount > 0 {
             Logger.sojuKit.info("CJK fonts installed: \(installedCount) fonts", category: "PodoSoju")
         } else {
