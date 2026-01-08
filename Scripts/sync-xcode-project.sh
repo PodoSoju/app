@@ -47,6 +47,8 @@ NEW_FILES=(
     "AddProgramView.swift:Soju/Views/Creation"
     "WorkspaceCreationView.swift:Soju/Views/Creation"
     "LogSettingsView.swift:Soju/Views/Settings"
+    "InstallationProgressView.swift:Soju/Views/Installation"
+    "ProgramSelectionView.swift:Soju/Views/Installation"
 )
 
 MISSING_FILES=()

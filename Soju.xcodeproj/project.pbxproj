@@ -12,6 +12,8 @@
 		88EA453262F14A2DBCB3A6F0 /* LogSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1660B57081A974D17AD903B4 /* LogSettingsView.swift */; };
 		95FED54F5AC27F839E1CEA66 /* ShortcutsGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8847C96A6F7F376A774BB5A /* ShortcutsGridView.swift */; };
 		A10000007A000001 /* SojuKit in Frameworks */ = {isa = PBXBuildFile; productRef = A10000008A000001 /* SojuKit */; };
+		ACEA05DBD9148E4E22088368 /* InstallationProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62096843B9ED5767E0988FF2 /* InstallationProgressView.swift */; };
+		AD37C7C98B6A70F210CD3704 /* ProgramSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DA84DC9B76D5CF3FE4DAC0C /* ProgramSelectionView.swift */; };
 		B158FB154206DA91C736424B /* WorkspaceCreationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC56F0F49A156509C92838B8 /* WorkspaceCreationView.swift */; };
 		CC083DF20E01C920D6C0C0B4 /* SojuApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1748B3B8E8B4555D81ACA7DF /* SojuApp.swift */; };
 		D3D5FF054D3F6083E61F1056 /* DesktopIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E206CE670265B9F92748345 /* DesktopIcon.swift */; };
@@ -19,20 +21,17 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0DA84DC9B76D5CF3FE4DAC0C /* ProgramSelectionView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ProgramSelectionView.swift; path = Soju/Views/Installation/ProgramSelectionView.swift; sourceTree = SOURCE_ROOT; };
 		1660B57081A974D17AD903B4 /* LogSettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LogSettingsView.swift; path = Soju/Views/Settings/LogSettingsView.swift; sourceTree = SOURCE_ROOT; };
 		1748B3B8E8B4555D81ACA7DF /* SojuApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Soju/SojuApp.swift; sourceTree = SOURCE_ROOT; };
 		37A25B46348717D664D05069 /* ShortcutView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ShortcutView.swift; path = Soju/Views/Workspace/ShortcutView.swift; sourceTree = SOURCE_ROOT; };
-		5A7E3894FDB34956A000001 /* DropZoneOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DropZoneOverlay.swift; sourceTree = "<group>"; };
 		5C9A43420D73887270D0A7AD /* AddProgramView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AddProgramView.swift; path = Soju/Views/Creation/AddProgramView.swift; sourceTree = SOURCE_ROOT; };
+		62096843B9ED5767E0988FF2 /* InstallationProgressView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = InstallationProgressView.swift; path = Soju/Views/Installation/InstallationProgressView.swift; sourceTree = SOURCE_ROOT; };
 		7C6404987D87A0F305F8F24E /* ContentView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Soju/ContentView.swift; sourceTree = SOURCE_ROOT; };
 		7E206CE670265B9F92748345 /* DesktopIcon.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DesktopIcon.swift; path = Soju/Models/DesktopIcon.swift; sourceTree = SOURCE_ROOT; };
 		A10000009A000001 /* Soju.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Soju.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1000000CA000001 /* SojuKit */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = SojuKit; path = SojuKit; sourceTree = "<group>"; };
-		A1000001CA000001 /* DesktopIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesktopIcon.swift; sourceTree = "<group>"; };
-		A1000001EA000001 /* DesktopView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesktopView.swift; sourceTree = "<group>"; };
-		A10000020A000001 /* DesktopIconView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesktopIconView.swift; sourceTree = "<group>"; };
 		C8847C96A6F7F376A774BB5A /* ShortcutsGridView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ShortcutsGridView.swift; path = Soju/Views/Workspace/ShortcutsGridView.swift; sourceTree = SOURCE_ROOT; };
-		E7DF58CF39294C84A000001 /* ProgramStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramStatusView.swift; sourceTree = "<group>"; };
 		FC56F0F49A156509C92838B8 /* WorkspaceCreationView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WorkspaceCreationView.swift; path = Soju/Views/Creation/WorkspaceCreationView.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
@@ -48,6 +47,23 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		9CE2C70A57FD566690A6A80F /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				9D53184105AB15F7C75FE75D /* Installation */,
+			);
+			name = Views;
+			sourceTree = "<group>";
+		};
+		9D53184105AB15F7C75FE75D /* Installation */ = {
+			isa = PBXGroup;
+			children = (
+				62096843B9ED5767E0988FF2 /* InstallationProgressView.swift */,
+				0DA84DC9B76D5CF3FE4DAC0C /* ProgramSelectionView.swift */,
+			);
+			name = Installation;
+			sourceTree = "<group>";
+		};
 		A1000000EA000001 = {
 			isa = PBXGroup;
 			children = (
@@ -68,6 +84,7 @@
 				5C9A43420D73887270D0A7AD /* AddProgramView.swift */,
 				7C6404987D87A0F305F8F24E /* ContentView.swift */,
 				1748B3B8E8B4555D81ACA7DF /* SojuApp.swift */,
+				9CE2C70A57FD566690A6A80F /* Views */,
 			);
 			path = Soju;
 			sourceTree = "<group>";
@@ -160,6 +177,8 @@
 				DAA75AB9BA126A91CEE945FE /* AddProgramView.swift in Sources */,
 				6193C8976F3B1DB3B0090E12 /* ContentView.swift in Sources */,
 				CC083DF20E01C920D6C0C0B4 /* SojuApp.swift in Sources */,
+				ACEA05DBD9148E4E22088368 /* InstallationProgressView.swift in Sources */,
+				AD37C7C98B6A70F210CD3704 /* ProgramSelectionView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

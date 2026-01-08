@@ -39,6 +39,36 @@ public struct InstallerDetector {
 
     // MARK: - Public API
 
+    /// Determines if the given file URL points to an uninstaller executable
+    ///
+    /// - Parameter url: The file URL to check
+    /// - Returns: `true` if the file is detected as an uninstaller, `false` otherwise
+    ///
+    /// # Example
+    /// ```swift
+    /// let uninstallUrl = URL(fileURLWithPath: "/Programs/unins000.exe")
+    /// InstallerDetector.isUninstaller(uninstallUrl) // true
+    ///
+    /// let appUrl = URL(fileURLWithPath: "/Programs/NetFile.exe")
+    /// InstallerDetector.isUninstaller(appUrl) // false
+    /// ```
+    public static func isUninstaller(_ url: URL) -> Bool {
+        let filename = url.deletingPathExtension().lastPathComponent.lowercased()
+
+        // Check for uninstaller keywords
+        for keyword in excludeKeywords {
+            if filename.contains(keyword) {
+                Logger.sojuKit.debug(
+                    "File contains uninstaller keyword '\(keyword)': is uninstaller",
+                    category: "InstallerDetector"
+                )
+                return true
+            }
+        }
+
+        return false
+    }
+
     /// Determines if the given file URL points to an installer executable
     ///
     /// - Parameter url: The file URL to check

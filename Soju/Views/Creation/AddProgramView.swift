@@ -25,6 +25,11 @@ struct AddProgramView: View {
     @State private var programName = ""
     @State private var selectedFileURL: URL?
 
+    // Installer detection state
+    @State private var showInstallerConfirm = false
+    @State private var showInstallationProgress = false
+    @State private var installerProgram: Program?
+
     var body: some View {
         NavigationStack {
             Form {
@@ -68,6 +73,38 @@ struct AddProgramView: View {
         }
         .frame(width: 400)
         .fixedSize(horizontal: false, vertical: true)
+        .alert("설치 파일 감지", isPresented: $showInstallerConfirm) {
+            Button("설치 실행") {
+                runInstaller()
+            }
+            Button("바로가기로 추가") {
+                addProgram()
+            }
+            Button("취소", role: .cancel) { }
+        } message: {
+            Text("'\(programName)'은(는) 설치 파일로 보입니다. 설치를 진행하시겠습니까?")
+        }
+        .sheet(isPresented: $showInstallationProgress) {
+            if let program = installerProgram {
+                InstallationProgressView(
+                    program: program,
+                    workspace: workspace,
+                    onComplete: { discoveredPrograms in
+                        // Add discovered programs to workspace
+                        for discovered in discoveredPrograms {
+                            let pinnedProgram = PinnedProgram(
+                                name: discovered.name,
+                                url: discovered.url
+                            )
+                            workspace.settings.pinnedPrograms.append(pinnedProgram)
+                        }
+
+                        showInstallationProgress = false
+                        dismiss()  // Close AddProgramView
+                    }
+                )
+            }
+        }
     }
 
     // MARK: - Actions
@@ -93,6 +130,13 @@ struct AddProgramView: View {
                 if programName.isEmpty {
                     programName = url.deletingPathExtension().lastPathComponent
                 }
+
+                // Check if installer
+                if InstallerDetector.isInstaller(url) {
+                    // Extract installer name for better UX
+                    programName = InstallerDetector.installerName(from: url)
+                    showInstallerConfirm = true
+                }
             }
         }
     }
@@ -115,6 +159,18 @@ struct AddProgramView: View {
         Logger.sojuKit.info("Program added successfully", category: "UI")
 
         dismiss()
+    }
+
+    private func runInstaller() {
+        guard let url = selectedFileURL else {
+            Logger.sojuKit.warning("Cannot run installer: no file selected", category: "UI")
+            return
+        }
+
+        Logger.sojuKit.info("Starting installer: \(programName) (\(url.lastPathComponent))", category: "UI")
+
+        installerProgram = Program(name: programName, url: url)
+        showInstallationProgress = true
     }
 }
 
