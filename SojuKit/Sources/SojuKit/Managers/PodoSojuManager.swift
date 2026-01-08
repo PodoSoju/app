@@ -12,8 +12,7 @@ import os.log
 /// - PodoSoju 바이너리 경로 관리
 /// - 환경 변수 설정 (WINEPREFIX, DXVK 등)
 /// - 프로세스 실행 관리
-@MainActor
-public final class PodoSojuManager {
+public final class PodoSojuManager: @unchecked Sendable {
     // MARK: - Singleton
 
     public static let shared = PodoSojuManager()
@@ -45,16 +44,19 @@ public final class PodoSojuManager {
     // MARK: - Initialization
 
     private init() {
-        // Get real home directory (not sandboxed path)
-        // In sandboxed apps, .applicationSupportDirectory returns containerized path
-        // We need the actual ~/Library/Application Support outside the sandbox
-        let realHome = FileManager.default.homeDirectoryForCurrentUser
-        let appSupport = realHome
-            .appending(path: "Library")
-            .appending(path: "Application Support")
+        // Use FileManager API that automatically resolves to containerized paths
+        // This ensures the app works correctly within its sandbox
+        guard let appSupport = FileManager.default.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        ).first else {
+            fatalError("Cannot access Application Support directory")
+        }
+
+        let bundleId = Bundle.main.bundleIdentifier ?? "com.soju.app"
 
         self.podoSojuRoot = appSupport
-            .appending(path: "com.soju.app")
+            .appending(path: bundleId)
             .appending(path: "Libraries")
             .appending(path: "PodoSoju")
 
@@ -63,6 +65,17 @@ public final class PodoSojuManager {
         self.wineBinary = binFolder.appending(path: "wine")
         self.wineserverBinary = binFolder.appending(path: "wineserver")
         self.winebootBinary = binFolder.appending(path: "wineboot")
+
+
+        // Debug logging
+        Logger.sojuKit.info("🏠 App Support: \(appSupport.path)", category: "PodoSoju")
+        Logger.sojuKit.info("🍇 PodoSoju root: \(podoSojuRoot.path)", category: "PodoSoju")
+        Logger.sojuKit.info("🍷 Wine binary: \(wineBinary.path)", category: "PodoSoju")
+
+        // Check if files exist
+        let wineExists = FileManager.default.fileExists(atPath: wineBinary.path)
+        let isExecutable = FileManager.default.isExecutableFile(atPath: wineBinary.path)
+        Logger.sojuKit.info("✅ Wine exists: \(wineExists), executable: \(isExecutable)", category: "PodoSoju")
 
         // 버전 정보 로드
         self.version = loadVersion()
@@ -124,6 +137,12 @@ public final class PodoSojuManager {
 
         // WINEPREFIX 설정
         env["WINEPREFIX"] = workspace.winePrefixPath
+
+        // TMPDIR 설정 (샌드박스 호환성)
+        // Wine이 /tmp 대신 컨테이너 내부 임시 디렉토리 사용하도록 설정
+        let containerTmp = FileManager.default.temporaryDirectory.path
+        env["TMPDIR"] = containerTmp
+        Logger.sojuKit.debug("TMPDIR set to: \(containerTmp)", category: "PodoSoju")
 
         // Wine 디버그 출력 설정
         #if DEBUG
