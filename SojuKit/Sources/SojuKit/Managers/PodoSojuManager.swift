@@ -123,16 +123,23 @@ public final class PodoSojuManager {
         // WINEPREFIX 설정
         env["WINEPREFIX"] = workspace.winePrefixPath
 
-        // Wine 디버그 설정 (fixme 메시지 숨김)
-        env["WINEDEBUG"] = "fixme-all"
+        // Wine 디버그 출력 설정
+        #if DEBUG
+        // Debug 빌드: 상세한 디버그 출력
+        env["WINEDEBUG"] = "+all"
+        Logger.sojuKit.debug("Wine debug mode enabled: +all", category: "PodoSoju")
+        #else
+        // Release 빌드: 경고만 표시 (fixme 제외)
+        env["WINEDEBUG"] = "warn+all,fixme-all"
+        #endif
 
-        // GStreamer 로그 최소화
-        env["GST_DEBUG"] = "1"
+        // GStreamer 로그 설정 (2 = 경고 및 에러만)
+        env["GST_DEBUG"] = "2"
 
         // Workspace 설정 반영
         workspace.settings.environmentVariables(wineEnv: &env)
 
-        // 추가 환경 변수 병합
+        // 추가 환경 변수 병합 (installer detection 등을 위한 WINEDEBUG 오버라이드 가능)
         env.merge(additionalEnv, uniquingKeysWith: { $1 })
 
         return env

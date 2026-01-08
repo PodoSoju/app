@@ -14,7 +14,8 @@ import os.log
 /// and extract program names from installer filenames.
 ///
 /// # Detection Logic
-/// - Identifies installers by common keywords: "setup", "install", "installer"
+/// - First checks filename keywords (fast)
+/// - Falls back to file signature detection using macOS `file` command (accurate)
 /// - Excludes uninstallers with keywords: "uninstall", "unins"
 /// - Case-insensitive matching against filename (without extension)
 ///
@@ -36,6 +37,16 @@ public struct InstallerDetector {
 
     /// Keywords that indicate an uninstaller file (case-insensitive)
     private static let excludeKeywords = ["uninstall", "unins"]
+
+    /// Known installer signatures detected by `file` command
+    private static let installerSignatures = [
+        "nullsoft installer",
+        "inno setup",
+        "installshield",
+        "wise installer",
+        "msi installer",
+        "windows installer"
+    ]
 
     // MARK: - Public API
 
@@ -71,6 +82,10 @@ public struct InstallerDetector {
 
     /// Determines if the given file URL points to an installer executable
     ///
+    /// Uses a two-stage detection strategy:
+    /// 1. Fast filename keyword check (returns immediately if match found)
+    /// 2. Accurate file signature check using macOS `file` command (slower but reliable)
+    ///
     /// - Parameter url: The file URL to check
     /// - Returns: `true` if the file is detected as an installer, `false` otherwise
     ///
@@ -93,7 +108,8 @@ public struct InstallerDetector {
             category: "InstallerDetector"
         )
 
-        // Exclude uninstaller files
+        // Stage 1: Check filename (fast)
+        // First exclude uninstaller files
         for excludeKeyword in excludeKeywords {
             if filename.contains(excludeKeyword) {
                 Logger.sojuKit.debug(
@@ -104,21 +120,89 @@ public struct InstallerDetector {
             }
         }
 
-        // Check for installer keywords
-        for keyword in installerKeywords {
-            if filename.contains(keyword) {
-                Logger.sojuKit.info(
-                    "File contains installer keyword '\(keyword)': is installer",
-                    category: "InstallerDetector"
-                )
-                return true
-            }
+        // Check for installer keywords in filename
+        let hasInstallerKeyword = installerKeywords.contains { filename.contains($0) }
+        
+        if hasInstallerKeyword {
+            Logger.sojuKit.info(
+                "File contains installer keyword: is installer",
+                category: "InstallerDetector"
+            )
+            return true
         }
 
+        // Stage 2: Check file signature (slower but accurate)
         Logger.sojuKit.debug(
-            "No installer keywords found: not an installer",
+            "No installer keywords in filename, checking file signature...",
             category: "InstallerDetector"
         )
+        return checkFileSignature(url)
+    }
+
+    // MARK: - Private Methods
+
+    /// Checks file signature using macOS `file` command
+    ///
+    /// This method uses the system `file` utility to detect actual installer types
+    /// based on file magic numbers and internal structure, rather than just filename.
+    ///
+    /// - Parameter url: The file URL to check
+    /// - Returns: `true` if file signature matches known installer types
+    private static func checkFileSignature(_ url: URL) -> Bool {
+        // Verify file exists
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            Logger.sojuKit.warning(
+                "File does not exist: \(url.path)",
+                category: "InstallerDetector"
+            )
+            return false
+        }
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/file")
+        process.arguments = [url.path]
+
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = pipe
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            if let output = String(data: data, encoding: .utf8) {
+                let lowercased = output.lowercased()
+
+                Logger.sojuKit.debug(
+                    "file command output: \(output.trimmingCharacters(in: .whitespacesAndNewlines))",
+                    category: "InstallerDetector"
+                )
+
+                // Check for known installer signatures
+                for signature in installerSignatures {
+                    if lowercased.contains(signature) {
+                        Logger.sojuKit.info(
+                            "Detected installer signature '\(signature)': is installer",
+                            category: "InstallerDetector"
+                        )
+                        return true
+                    }
+                }
+
+                Logger.sojuKit.debug(
+                    "No installer signature found in file output",
+                    category: "InstallerDetector"
+                )
+                return false
+            }
+        } catch {
+            Logger.sojuKit.error(
+                "Failed to check file signature: \(error.localizedDescription)",
+                category: "InstallerDetector"
+            )
+        }
+
         return false
     }
 
