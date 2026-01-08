@@ -41,12 +41,39 @@ public class WorkspaceManager: ObservableObject {
         var data = WorkspaceData()
         allWorkspaces = data.loadWorkspaces()
 
+        // Ensure CJK fonts are installed for each workspace
+        Task {
+            for workspace in allWorkspaces {
+                await ensureFontsInstalled(workspace: workspace)
+            }
+        }
+
         // If only one workspace exists, select it automatically
         if allWorkspaces.count == 1 {
             currentWorkspace = allWorkspaces.first
         }
         // If multiple workspaces exist, currentWorkspace remains nil
         // (user must select from WorkspaceSelectionView)
+    }
+
+    /// Ensure CJK fonts are installed in a workspace
+    /// - Parameter workspace: Target workspace to check
+    private func ensureFontsInstalled(workspace: Workspace) async {
+        let fontsDir = workspace.winePrefixURL.appending(path: "windows/Fonts")
+        let testFont = fontsDir.appending(path: "AppleGothic.ttf")
+
+        // Skip if already installed
+        if FileManager.default.fileExists(atPath: testFont.path) {
+            return
+        }
+
+        // Install fonts
+        do {
+            try PodoSojuManager.shared.installCJKFonts(workspace: workspace)
+            Logger.sojuKit.info("CJK fonts installed for existing workspace: \(workspace.settings.name)", category: "WorkspaceManager")
+        } catch {
+            Logger.sojuKit.warning("Failed to install CJK fonts for workspace \(workspace.settings.name): \(error.localizedDescription)", category: "WorkspaceManager")
+        }
     }
 
     // MARK: - Workspace CRUD
