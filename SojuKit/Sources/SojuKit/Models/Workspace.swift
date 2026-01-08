@@ -189,37 +189,16 @@ public class Program: Identifiable, Hashable, ObservableObject {
             let wineArgs = ["start", "/unix", self.url.path(percentEncoded: false)]
             Logger.sojuKit.debug("🍷 Wine args: \(wineArgs)", category: category)
 
-            for await processOutput in try podoSoju.runWine(
+            // Use empty loop to ignore output and just wait for process completion
+            // This prevents blocking on 'wine start /unix' which spawns background processes
+            // Pattern from Whisky (line 110-114)
+            for await _ in try podoSoju.runWine(
                 args: wineArgs,
                 workspace: workspace,
                 additionalEnv: additionalEnv
-            ) {
-                switch processOutput {
-                case .message(let message):
-                    Logger.sojuKit.debug("📤 Output: \(message)", category: category)
-                    await MainActor.run {
-                        self.output.append(message)
-                    }
-                case .error(let error):
-                    Logger.sojuKit.error("❌ Error: \(error)", category: category)
-                    await MainActor.run {
-                        self.output.append("ERROR: \(error)")
-                    }
-                case .terminated(let code):
-                    Logger.sojuKit.info("🏁 Terminated with code \(code)", category: category)
-                    await MainActor.run {
-                        self.isRunning = false
-                        self.exitCode = code
-                    }
-                    if code == 0 {
-                        Logger.sojuKit.info("✅ Program completed successfully", category: category)
-                    } else {
-                        Logger.sojuKit.error("⚠️ Program exited with error code \(code)", category: category)
-                    }
-                case .started:
-                    Logger.sojuKit.info("▶️ Process started", category: category)
-                }
-            }
+            ) { }
+
+            Logger.sojuKit.info("✅ Wine start command completed", category: category)
         } catch {
             Logger.sojuKit.critical("💥 Fatal error: \(error.localizedDescription)", category: category)
             Logger.sojuKit.debug("Error details: \(String(reflecting: error))", category: category)

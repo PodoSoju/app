@@ -57,32 +57,58 @@ public class WorkspaceManager: ObservableObject {
         icon: String = "desktopcomputer",
         windowsVersion: WinVersion = .win10
     ) async throws -> Workspace {
-        Logger.sojuKit.info("🏗️ Creating workspace: '\(name)'", category: "WorkspaceManager")
-        Logger.sojuKit.debug("Icon: '\(icon)', Windows version: '\(windowsVersion)'", category: "WorkspaceManager")
+        let startTime = Date()
+        Logger.sojuKit.info("🏗️ [1/6] Creating workspace: '\(name)'", category: "WorkspaceManager")
+        Logger.sojuKit.debug("    ├─ Icon: '\(icon)'", category: "WorkspaceManager")
+        Logger.sojuKit.debug("    ├─ Windows version: '\(windowsVersion)'", category: "WorkspaceManager")
+        Logger.sojuKit.debug("    └─ Base directory: \(WorkspaceData.defaultWorkspacesDir.path())", category: "WorkspaceManager")
 
         // 1. Create workspace directory
         let workspaceURL = WorkspaceData.defaultWorkspacesDir
             .appending(path: UUID().uuidString)
 
+        Logger.sojuKit.info("📁 [2/6] Creating workspace directory...", category: "WorkspaceManager")
+        Logger.sojuKit.debug("    └─ Path: \(workspaceURL.path())", category: "WorkspaceManager")
+
         try FileManager.default.createDirectory(
             at: workspaceURL,
             withIntermediateDirectories: true
         )
-        Logger.sojuKit.debug("📁 Workspace directory created at: \(workspaceURL.path())", category: "WorkspaceManager")
+        Logger.sojuKit.info("    ✅ Directory created", category: "WorkspaceManager")
 
         // 2. Initialize Wine prefix
-        Logger.sojuKit.info("🍷 Initializing Wine prefix with wineboot...", category: "WorkspaceManager")
+        Logger.sojuKit.info("🍷 [3/6] Initializing Wine prefix with wineboot...", category: "WorkspaceManager")
+        Logger.sojuKit.debug("    ├─ WINEPREFIX: \(workspaceURL.path())", category: "WorkspaceManager")
+        Logger.sojuKit.debug("    └─ This may take 10-20 seconds", category: "WorkspaceManager")
 
         let tempWorkspace = Workspace(workspaceUrl: workspaceURL, isAvailable: true)
         do {
+            let winebootStart = Date()
             try await PodoSojuManager.shared.runWineboot(workspace: tempWorkspace)
-            Logger.sojuKit.info("✅ Wine prefix initialized successfully", category: "WorkspaceManager")
+            let winebootDuration = Date().timeIntervalSince(winebootStart)
+
+            // Verify Wine prefix structure
+            let driveCPath = workspaceURL.appending(path: "drive_c")
+            let dosdevicesPath = workspaceURL.appending(path: "dosdevices")
+            let driveCExists = FileManager.default.fileExists(atPath: driveCPath.path())
+            let dosdevicesExists = FileManager.default.fileExists(atPath: dosdevicesPath.path())
+
+            Logger.sojuKit.info("    ✅ Wine prefix initialized in \(String(format: "%.1f", winebootDuration))s", category: "WorkspaceManager")
+            Logger.sojuKit.debug("    ├─ drive_c: \(driveCExists ? "✓" : "✗")", category: "WorkspaceManager")
+            Logger.sojuKit.debug("    └─ dosdevices: \(dosdevicesExists ? "✓" : "✗")", category: "WorkspaceManager")
+
+            if !driveCExists || !dosdevicesExists {
+                Logger.sojuKit.warning("    ⚠️  Incomplete Wine prefix structure", category: "WorkspaceManager")
+            }
         } catch {
-            Logger.sojuKit.error("❌ Failed to initialize Wine prefix: \(error)", category: "WorkspaceManager")
+            Logger.sojuKit.error("    ❌ Failed to initialize Wine prefix: \(error)", category: "WorkspaceManager")
+            Logger.sojuKit.error("    └─ Cleaning up workspace directory", category: "WorkspaceManager")
+            try? FileManager.default.removeItem(at: workspaceURL)
             throw error
         }
 
         // 3. Create metadata
+        Logger.sojuKit.info("💾 [4/6] Creating workspace metadata...", category: "WorkspaceManager")
         var settings = WorkspaceSettings()
         settings.name = name
         settings.icon = icon
@@ -91,22 +117,31 @@ public class WorkspaceManager: ObservableObject {
         let metadataURL = workspaceURL
             .appending(path: "Metadata")
             .appendingPathExtension("plist")
+
+        Logger.sojuKit.debug("    └─ Saving to: \(metadataURL.path())", category: "WorkspaceManager")
         try settings.encode(to: metadataURL)
-        Logger.sojuKit.debug("💾 Workspace metadata saved to: \(metadataURL.path())", category: "WorkspaceManager")
+        Logger.sojuKit.info("    ✅ Metadata saved", category: "WorkspaceManager")
 
         // 4. Register in WorkspaceData
+        Logger.sojuKit.info("📝 [5/6] Registering workspace in WorkspaceData...", category: "WorkspaceManager")
         var data = WorkspaceData()
         data.workspacePaths.append(workspaceURL)
+        Logger.sojuKit.info("    ✅ Registered (\(data.workspacePaths.count) total workspaces)", category: "WorkspaceManager")
 
         // 5. Create and return Workspace object
         let workspace = Workspace(workspaceUrl: workspaceURL, isAvailable: true)
 
         // 6. Reload workspaces
+        Logger.sojuKit.info("🔄 [6/6] Reloading workspace list...", category: "WorkspaceManager")
         await MainActor.run {
             loadWorkspaces()
         }
+        Logger.sojuKit.info("    ✅ Workspaces reloaded", category: "WorkspaceManager")
 
-        Logger.sojuKit.info("✅ Workspace '\(name)' created successfully", category: "WorkspaceManager")
+        let totalDuration = Date().timeIntervalSince(startTime)
+        Logger.sojuKit.info("🎉 Workspace '\(name)' created successfully in \(String(format: "%.1f", totalDuration))s", category: "WorkspaceManager")
+        Logger.sojuKit.debug("    └─ UUID: \(workspace.id)", category: "WorkspaceManager")
+
         return workspace
     }
 
