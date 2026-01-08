@@ -100,6 +100,16 @@ public class WorkspaceManager: ObservableObject {
             if !driveCExists || !dosdevicesExists {
                 Logger.sojuKit.warning("    ⚠️  Incomplete Wine prefix structure", category: "WorkspaceManager")
             }
+
+            // Install CJK fonts for Korean/Japanese/Chinese support
+            Logger.sojuKit.info("🔤 [3.5/6] Installing CJK fonts...", category: "WorkspaceManager")
+            do {
+                try PodoSojuManager.shared.installCJKFonts(workspace: tempWorkspace)
+                Logger.sojuKit.info("    ✅ CJK fonts installed", category: "WorkspaceManager")
+            } catch {
+                // Font installation failure is non-fatal - log warning but continue
+                Logger.sojuKit.warning("    ⚠️  CJK font installation failed: \(error.localizedDescription)", category: "WorkspaceManager")
+            }
         } catch {
             Logger.sojuKit.error("    ❌ Failed to initialize Wine prefix: \(error)", category: "WorkspaceManager")
             Logger.sojuKit.error("    └─ Cleaning up workspace directory", category: "WorkspaceManager")

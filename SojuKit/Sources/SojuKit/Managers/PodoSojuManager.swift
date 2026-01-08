@@ -195,17 +195,32 @@ public final class PodoSojuManager: @unchecked Sendable {
         process.environment = constructEnvironment(for: workspace, additionalEnv: additionalEnv)
         process.qualityOfService = .userInitiated
 
-        // wine start /unix는 GUI 프로세스를 포크하므로 출력 캡처하지 않음
-        // (파이프가 GUI 표시를 차단할 수 있음)
-        if !captureOutput {
+        if captureOutput {
+            // 기존 runStream() 사용
+            Logger.sojuKit.info("🚀 Starting Wine process with output capture...", category: "PodoSoju")
+            return try process.runStream(name: args.joined(separator: " "))
+        } else {
+            // GUI 모드: 파이프 없이 직접 실행
             process.standardOutput = nil
             process.standardError = nil
-            Logger.sojuKit.info("🎨 GUI mode: output capture disabled", category: "PodoSoju")
+            Logger.sojuKit.info("🎨 GUI mode: running without pipes", category: "PodoSoju")
+
+            return AsyncStream { continuation in
+                Task {
+                    continuation.yield(.started)
+                    do {
+                        try process.run()
+                        Logger.sojuKit.info("🚀 Wine process started (GUI mode)", category: "PodoSoju")
+                        // GUI 앱은 fork 후 바로 반환되므로 기다리지 않음
+                        continuation.yield(.terminated(0))
+                    } catch {
+                        Logger.sojuKit.error("💥 Wine process failed: \(error)", category: "PodoSoju")
+                        continuation.yield(.terminated(-1))
+                    }
+                    continuation.finish()
+                }
+            }
         }
-
-        Logger.sojuKit.info("🚀 Starting Wine process...", category: "PodoSoju")
-
-        return try process.runStream(name: args.joined(separator: " "))
     }
 
     /// wineboot 실행 (prefix 초기화)
@@ -297,6 +312,39 @@ public final class PodoSojuManager: @unchecked Sendable {
         return version
     }
 
+    /// Convert Unix path to Windows path using winepath
+    /// - Parameters:
+    ///   - unixPath: macOS/Unix file path
+    ///   - workspace: Target workspace for WINEPREFIX
+    /// - Returns: Windows-style path (e.g., "C:\\users\\Public\\Desktop\\file.lnk")
+    public func convertToWindowsPath(_ unixPath: String, workspace: Workspace) async throws -> String {
+        try validate()
+
+        let winepathBinary = binFolder.appending(path: "winepath")
+
+        let process = Process()
+        process.executableURL = winepathBinary
+        process.arguments = ["-w", unixPath]
+        process.environment = constructEnvironment(for: workspace)
+
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = FileHandle.nullDevice
+
+        try process.run()
+        process.waitUntilExit()
+
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        guard let windowsPath = String(data: data, encoding: .utf8)?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+              !windowsPath.isEmpty else {
+            throw PodoSojuError.pathConversionFailed(unixPath)
+        }
+
+        Logger.sojuKit.debug("Path converted: \(unixPath) -> \(windowsPath)", category: "PodoSoju")
+        return windowsPath
+    }
+
     /// Workspace prefix 초기화 (wineboot --init)
     public func initializeWorkspace(_ workspace: Workspace) async throws {
         // prefix 디렉토리가 없으면 생성
@@ -311,6 +359,102 @@ public final class PodoSojuManager: @unchecked Sendable {
         try await runWineboot(workspace: workspace)
 
         Logger.sojuKit.info("Workspace initialized at \(workspace.winePrefixPath)")
+    }
+
+    // MARK: - CJK Font Installation
+
+    /// Install CJK (Korean/Japanese/Chinese) fonts to Wine prefix
+    /// Copies macOS system Korean fonts to Wine's Fonts directory
+    /// - Parameter workspace: Target workspace
+    public func installCJKFonts(workspace: Workspace) throws {
+        let fontsDest = workspace.winePrefixURL.appending(path: "windows/Fonts")
+
+        // Create Fonts directory if it doesn't exist
+        if !FileManager.default.fileExists(atPath: fontsDest.path) {
+            try FileManager.default.createDirectory(
+                at: fontsDest,
+                withIntermediateDirectories: true
+            )
+        }
+
+        // macOS system Korean fonts to install
+        let systemFontsPath = "/System/Library/Fonts/Supplemental"
+        let fontsToInstall = [
+            "AppleGothic.ttf",
+            "AppleMyungjo.ttf"
+        ]
+
+        var installedCount = 0
+        for fontName in fontsToInstall {
+            let source = URL(fileURLWithPath: systemFontsPath).appending(path: fontName)
+            let dest = fontsDest.appending(path: fontName)
+
+            // Skip if already installed
+            if FileManager.default.fileExists(atPath: dest.path) {
+                Logger.sojuKit.debug("Font already exists: \(fontName)", category: "PodoSoju")
+                continue
+            }
+
+            // Copy if source exists
+            if FileManager.default.fileExists(atPath: source.path) {
+                do {
+                    try FileManager.default.copyItem(at: source, to: dest)
+                    installedCount += 1
+                    Logger.sojuKit.debug("Installed font: \(fontName)", category: "PodoSoju")
+                } catch {
+                    Logger.sojuKit.warning("Failed to copy font \(fontName): \(error.localizedDescription)", category: "PodoSoju")
+                }
+            } else {
+                Logger.sojuKit.warning("System font not found: \(fontName)", category: "PodoSoju")
+            }
+        }
+
+        if installedCount > 0 {
+            Logger.sojuKit.info("CJK fonts installed: \(installedCount) fonts", category: "PodoSoju")
+        } else {
+            Logger.sojuKit.debug("No new CJK fonts to install", category: "PodoSoju")
+        }
+    }
+
+    // MARK: - Process Cleanup
+
+    /// 모든 Wine 관련 프로세스 종료
+    /// 앱 종료 시 호출하여 orphan 프로세스 방지
+    public func killAllWineProcesses() {
+        Logger.sojuKit.info("🧹 Killing all Wine processes...", category: "PodoSoju")
+
+        // wineserver 종료 (이것이 모든 Wine 프로세스를 정리함)
+        killProcess(named: "wineserver")
+
+        // wine64 프로세스도 명시적으로 종료 (혹시 남아있는 경우)
+        killProcess(named: "wine64")
+        killProcess(named: "wine")
+
+        Logger.sojuKit.info("✅ Wine process cleanup completed", category: "PodoSoju")
+    }
+
+    /// 특정 이름의 프로세스 종료
+    /// - Parameter name: 프로세스 이름 (pkill -f 패턴)
+    private func killProcess(named name: String) {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/pkill")
+        process.arguments = ["-f", name]
+
+        // 출력 무시
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+
+            if process.terminationStatus == 0 {
+                Logger.sojuKit.debug("Killed processes matching '\(name)'", category: "PodoSoju")
+            }
+        } catch {
+            // pkill 실패는 무시 (프로세스가 없는 경우 등)
+            Logger.sojuKit.debug("No processes matching '\(name)' to kill", category: "PodoSoju")
+        }
     }
 }
 
@@ -342,6 +486,7 @@ public enum PodoSojuError: LocalizedError {
     case notInstalled
     case notExecutable(String)
     case winebootFailed(Int32)
+    case pathConversionFailed(String)
 
     public var errorDescription: String? {
         switch self {
@@ -351,6 +496,8 @@ public enum PodoSojuError: LocalizedError {
             return "PodoSoju binary at \(path) is not executable."
         case .winebootFailed(let code):
             return "wineboot failed with exit code \(code)"
+        case .pathConversionFailed(let path):
+            return "Failed to convert path to Windows format: \(path)"
         }
     }
 }

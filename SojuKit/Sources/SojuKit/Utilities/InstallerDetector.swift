@@ -38,6 +38,13 @@ public struct InstallerDetector {
     /// Keywords that indicate an uninstaller file (case-insensitive)
     private static let excludeKeywords = ["uninstall", "unins"]
 
+    /// Wine stub programs (empty shells that don't do anything useful)
+    private static let wineStubPrograms: Set<String> = [
+        "wmplayer", "wordpad", "notepad", "regedit", "winecfg",
+        "explorer", "iexplore", "winefile", "winemine", "winhelp",
+        "cmd", "control", "taskmgr", "msiexec", "regsvr32"
+    ]
+
     /// Known installer signatures detected by `file` command
     private static let installerSignatures = [
         "nullsoft installer",
@@ -78,6 +85,36 @@ public struct InstallerDetector {
         }
 
         return false
+    }
+
+    /// Determines if the given file URL points to a Wine stub program
+    ///
+    /// Wine stub programs are placeholder executables that either do nothing
+    /// or provide minimal functionality. These are not useful to display as shortcuts.
+    ///
+    /// - Parameter url: The file URL to check
+    /// - Returns: `true` if the file is a known Wine stub program, `false` otherwise
+    ///
+    /// # Example
+    /// ```swift
+    /// let wmplayerUrl = URL(fileURLWithPath: "/Programs/wmplayer.exe")
+    /// InstallerDetector.isWineStub(wmplayerUrl) // true
+    ///
+    /// let gameUrl = URL(fileURLWithPath: "/Programs/MyGame.exe")
+    /// InstallerDetector.isWineStub(gameUrl) // false
+    /// ```
+    public static func isWineStub(_ url: URL) -> Bool {
+        let name = url.deletingPathExtension().lastPathComponent.lowercased()
+        let isStub = wineStubPrograms.contains(name)
+
+        if isStub {
+            Logger.sojuKit.debug(
+                "File '\(url.lastPathComponent)' is a Wine stub program",
+                category: "InstallerDetector"
+            )
+        }
+
+        return isStub
     }
 
     /// Determines if the given file URL points to an installer executable

@@ -33,6 +33,13 @@ public final class Workspace: ObservableObject, Equatable, Hashable, Identifiabl
     /// Whether workspace is available (metadata exists)
     public var isAvailable: Bool = false
 
+    /// Running program URLs - used to prevent duplicate launches and focus existing windows
+    /// Key: URL path (lowercased), Value: NSRunningApplication PID
+    @Published public var runningProgramPIDs: [String: pid_t] = [:]
+
+    /// Lock for thread-safe access to runningProgramPIDs
+    private let runningLock = NSLock()
+
     // MARK: - Computed Properties
 
     /// Wine prefix URL (drive_c directory)
@@ -89,6 +96,116 @@ public final class Workspace: ObservableObject, Equatable, Hashable, Identifiabl
         settings.environmentVariables(wineEnv: &env)
 
         return env
+    }
+
+    // MARK: - Running Program Management
+
+    /// Check if a program is already running
+    /// - Parameter url: Program URL to check
+    /// - Returns: true if program is running
+    public func isProgramRunning(_ url: URL) -> Bool {
+        runningLock.lock()
+        defer { runningLock.unlock() }
+
+        let key = url.path.lowercased()
+        guard let pid = runningProgramPIDs[key] else {
+            return false
+        }
+
+        // Verify the process is still running
+        if let app = NSRunningApplication(processIdentifier: pid), !app.isTerminated {
+            return true
+        }
+
+        // Process no longer running, clean up
+        runningProgramPIDs.removeValue(forKey: key)
+        return false
+    }
+
+    /// Register a program as running
+    /// - Parameters:
+    ///   - url: Program URL
+    ///   - pid: Process ID (optional, for Wine we may not have direct PID)
+    public func registerRunningProgram(_ url: URL, pid: pid_t? = nil) {
+        runningLock.lock()
+        defer { runningLock.unlock() }
+
+        let key = url.path.lowercased()
+        // Use 0 as placeholder PID when actual PID is not available
+        runningProgramPIDs[key] = pid ?? 0
+        Logger.sojuKit.info("Registered running program: \(url.lastPathComponent)", category: "Workspace")
+    }
+
+    /// Unregister a program when it exits
+    /// - Parameter url: Program URL
+    public func unregisterRunningProgram(_ url: URL) {
+        runningLock.lock()
+        defer { runningLock.unlock() }
+
+        let key = url.path.lowercased()
+        runningProgramPIDs.removeValue(forKey: key)
+        Logger.sojuKit.info("Unregistered running program: \(url.lastPathComponent)", category: "Workspace")
+    }
+
+    /// Focus an existing Wine window for the program
+    /// - Parameter url: Program URL
+    /// - Returns: true if window was focused, false if not found
+    @MainActor
+    public func focusRunningProgram(_ url: URL) -> Bool {
+        Logger.sojuKit.info("Attempting to focus: \(url.lastPathComponent)", category: "Workspace")
+
+        // Find Wine-related running applications
+        let runningApps = NSWorkspace.shared.runningApplications
+        let wineApps = runningApps.filter { app in
+            guard let bundleId = app.bundleIdentifier else {
+                // Wine processes often don't have bundle IDs
+                // Check by executable name
+                let nameContainsWine = app.localizedName?.lowercased().contains("wine") == true
+                let execContainsWine = app.executableURL?.lastPathComponent.lowercased().contains("wine") == true
+                return nameContainsWine || execContainsWine
+            }
+            return bundleId.lowercased().contains("wine") ||
+                   bundleId.lowercased().contains("crossover")
+        }
+
+        Logger.sojuKit.debug("Found \(wineApps.count) Wine-related apps", category: "Workspace")
+
+        // Try to activate any Wine app (they share windows)
+        for app in wineApps {
+            if app.activate(options: [.activateIgnoringOtherApps]) {
+                Logger.sojuKit.info("Activated Wine app: \(app.localizedName ?? "unknown")", category: "Workspace")
+                return true
+            }
+        }
+
+        // Skip AppleScript fallback - just return false
+        // AppleScript requires accessibility permissions which may cause issues
+        return false
+    }
+
+    /// Check if any Wine processes are still running for this workspace
+    /// - Returns: true if Wine processes are running
+    public func hasRunningWineProcesses() -> Bool {
+        let runningApps = NSWorkspace.shared.runningApplications
+        return runningApps.contains { app in
+            app.localizedName?.lowercased().contains("wine") == true ||
+            app.executableURL?.lastPathComponent.lowercased().contains("wine") == true
+        }
+    }
+
+    /// Clean up stale entries in runningProgramPIDs
+    /// Call this periodically or when Wine processes are known to have exited
+    public func cleanupStaleRunningPrograms() {
+        runningLock.lock()
+        defer { runningLock.unlock() }
+
+        // If no Wine processes are running, clear all entries
+        if !hasRunningWineProcesses() {
+            if !runningProgramPIDs.isEmpty {
+                Logger.sojuKit.info("No Wine processes running, clearing \(runningProgramPIDs.count) stale entries", category: "Workspace")
+                runningProgramPIDs.removeAll()
+            }
+        }
     }
 
     // MARK: - Equatable
@@ -153,10 +270,20 @@ public class Program: Identifiable, Hashable, ObservableObject, @unchecked Senda
         Logger.sojuKit.debug("URL: \(self.url.path(percentEncoded: false))", category: category)
         Logger.sojuKit.debug("Workspace: \(workspace.settings.name)", category: category)
 
-        guard !isRunning else {
-            Logger.sojuKit.warning("⚠️ Program already running, ignoring request", category: category)
+        // Check if this program is already running - focus instead of launching new instance
+        if workspace.isProgramRunning(self.url) {
+            Logger.sojuKit.info("⚠️ Program already running, attempting to focus", category: category)
+            _ = await workspace.focusRunningProgram(self.url)
             return
         }
+
+        guard !isRunning else {
+            Logger.sojuKit.warning("⚠️ Program instance already running, ignoring request", category: category)
+            return
+        }
+
+        // Register this program as running
+        workspace.registerRunningProgram(self.url)
 
         await MainActor.run {
             self.isRunning = true
@@ -189,9 +316,26 @@ public class Program: Identifiable, Hashable, ObservableObject, @unchecked Senda
                     additionalEnv["WINEDEBUG"] = "warn+all"
                 }
 
-                // Use 'wine start /unix' to initialize GUI environment (like Whisky)
-                // This enables explorer.exe and allows GUI windows to display
-                let wineArgs = ["start", "/unix", self.url.path(percentEncoded: false)]
+                // Determine Wine arguments based on file type
+                // .lnk files require ShortcutParser to extract target exe path
+                let wineArgs: [String]
+                let fileExtension = self.url.pathExtension.lowercased()
+
+                if fileExtension == "lnk" {
+                    // ShortcutParser로 실제 타겟 exe 찾기
+                    if let targetURL = try? await ShortcutParser.parseShortcut(self.url, winePrefixURL: workspace.winePrefixURL) {
+                        Logger.sojuKit.info("📎 Shortcut target found: \(targetURL.path)", category: category)
+                        wineArgs = ["start", "/unix", targetURL.path(percentEncoded: false)]
+                    } else {
+                        // fallback: .lnk 파일 직접 실행
+                        Logger.sojuKit.warning("📎 Shortcut target not found, using lnk directly", category: category)
+                        wineArgs = ["start", "/unix", self.url.path(percentEncoded: false)]
+                    }
+                } else {
+                    // For .exe files, use 'wine start /unix' to handle Unix paths
+                    wineArgs = ["start", "/unix", self.url.path(percentEncoded: false)]
+                }
+
                 Logger.sojuKit.debug("🍷 Wine args: \(wineArgs)", category: category)
                 Logger.sojuKit.info("🎭 Running in detached task (Whisky pattern)", category: category)
 
@@ -207,6 +351,17 @@ public class Program: Identifiable, Hashable, ObservableObject, @unchecked Senda
                 ) { }
 
                 Logger.sojuKit.info("✅ Wine start command completed", category: category)
+
+                // Set exit code and running state on successful completion (Whisky pattern)
+                // This triggers InstallationProgressView.onChange(of: program.exitCode) to advance phase
+                await MainActor.run {
+                    self.isRunning = false
+                    self.exitCode = 0
+                }
+
+                // Unregister program when Wine process completes
+                workspace.unregisterRunningProgram(self.url)
+                Logger.sojuKit.info("✅ Program unregistered: \(self.name)", category: category)
             } catch {
                 Logger.sojuKit.critical("💥 Fatal error: \(error.localizedDescription)", category: category)
                 Logger.sojuKit.debug("Error details: \(String(reflecting: error))", category: category)
@@ -215,6 +370,9 @@ public class Program: Identifiable, Hashable, ObservableObject, @unchecked Senda
                     self.isRunning = false
                     self.exitCode = 1
                 }
+
+                // Unregister program on error as well
+                workspace.unregisterRunningProgram(self.url)
 
                 throw error
             }

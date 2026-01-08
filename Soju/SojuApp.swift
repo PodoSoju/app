@@ -11,6 +11,8 @@ import os.log
 
 @main
 struct SojuApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
     init() {
         // Log app launch to file
         Logger.sojuKit.logWithFile("🍶 Soju app launched", level: .info)
@@ -35,5 +37,15 @@ struct SojuApp: App {
                 }
             }
         }
+    }
+}
+
+// MARK: - AppDelegate
+
+class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationWillTerminate(_ notification: Notification) {
+        Logger.sojuKit.logWithFile("🛑 Soju app terminating, cleaning up Wine processes...", level: .info)
+        PodoSojuManager.shared.killAllWineProcesses()
+        Logger.sojuKit.logWithFile("👋 Soju app terminated", level: .info)
     }
 }

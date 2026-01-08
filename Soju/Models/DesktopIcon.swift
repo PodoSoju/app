@@ -13,9 +13,9 @@ struct DesktopIcon: Identifiable, Hashable, Comparable {
     let id: UUID
     let name: String
     let url: URL
-    let iconImage: String // SF Symbol name or custom image name
+    let iconImage: String // SF Symbol name
 
-    init(id: UUID = UUID(), name: String, url: URL, iconImage: String = "app") {
+    init(id: UUID = UUID(), name: String, url: URL, iconImage: String = "app.fill") {
         self.id = id
         self.name = name
         self.url = url
