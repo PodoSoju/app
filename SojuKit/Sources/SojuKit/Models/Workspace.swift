@@ -10,7 +10,7 @@ import SwiftUI
 import AppKit
 import os.log
 
-public final class Workspace: ObservableObject, Equatable, Hashable, Identifiable, Comparable {
+public final class Workspace: ObservableObject, Equatable, Hashable, Identifiable, Comparable, @unchecked Sendable {
     // MARK: - Properties
 
     /// Workspace directory URL
@@ -120,7 +120,7 @@ public final class Workspace: ObservableObject, Equatable, Hashable, Identifiabl
 
 /// Represents a Windows program that can be executed in a workspace
 @MainActor
-public class Program: Identifiable, Hashable, ObservableObject {
+public class Program: Identifiable, Hashable, ObservableObject, @unchecked Sendable {
     public let id: UUID
     public let name: String
     public let url: URL // Path to .exe file
@@ -143,6 +143,7 @@ public class Program: Identifiable, Hashable, ObservableObject {
     }
 
     /// Run this program in the specified workspace
+    /// Uses Task.detached to match Whisky's execution context for GUI visibility
     public func run(in workspace: Workspace) async throws {
         let executionId = UUID().uuidString.prefix(8)
         let category = "Program[\(executionId)]"
@@ -161,57 +162,63 @@ public class Program: Identifiable, Hashable, ObservableObject {
             self.isRunning = true
             self.exitCode = nil
             self.output = []
-            
+
             // Add test output to verify the mechanism works
             self.output.append("🧪 Test: Wine execution starting...")
             self.output.append("Program: \(self.name)")
             self.output.append("File: \(self.url.path(percentEncoded: false))")
-            
+
             Logger.sojuKit.debug("✅ Test output added to array, count: \(self.output.count)", category: category)
         }
         Logger.sojuKit.debug("✅ State updated: isRunning=true", category: category)
 
-        do {
-            let podoSoju = PodoSojuManager.shared
-            Logger.sojuKit.debug("📦 PodoSojuManager acquired", category: category)
+        // Use Task.detached to create independent execution context (Whisky pattern)
+        // This is critical for GUI window visibility
+        // Program is @unchecked Sendable (same as Whisky)
+        try await Task.detached(priority: .userInitiated) { [workspace] in
+            do {
+                let podoSoju = PodoSojuManager.shared
+                Logger.sojuKit.debug("📦 PodoSojuManager acquired", category: category)
 
-            // Check if this is an installer - enable verbose Wine debug output
-            let isInstaller = InstallerDetector.isInstaller(self.url)
-            var additionalEnv: [String: String] = [:]
-            
-            if isInstaller {
-                Logger.sojuKit.info("🔧 Installer detected - enabling Wine debug output", category: category)
-                additionalEnv["WINEDEBUG"] = "warn+all"
+                // Check if this is an installer - enable verbose Wine debug output
+                let isInstaller = InstallerDetector.isInstaller(self.url)
+                var additionalEnv: [String: String] = [:]
+
+                if isInstaller {
+                    Logger.sojuKit.info("🔧 Installer detected - enabling Wine debug output", category: category)
+                    additionalEnv["WINEDEBUG"] = "warn+all"
+                }
+
+                // Use 'wine start /unix' to initialize GUI environment (like Whisky)
+                // This enables explorer.exe and allows GUI windows to display
+                let wineArgs = ["start", "/unix", self.url.path(percentEncoded: false)]
+                Logger.sojuKit.debug("🍷 Wine args: \(wineArgs)", category: category)
+                Logger.sojuKit.info("🎭 Running in detached task (Whisky pattern)", category: category)
+
+                // Use empty loop to ignore output and just wait for process completion
+                // This prevents blocking on 'wine start /unix' which spawns background processes
+                // Pattern from Whisky (line 110-114)
+                // captureOutput: false prevents pipes from blocking GUI windows
+                for await _ in try podoSoju.runWine(
+                    args: wineArgs,
+                    workspace: workspace,
+                    additionalEnv: additionalEnv,
+                    captureOutput: false
+                ) { }
+
+                Logger.sojuKit.info("✅ Wine start command completed", category: category)
+            } catch {
+                Logger.sojuKit.critical("💥 Fatal error: \(error.localizedDescription)", category: category)
+                Logger.sojuKit.debug("Error details: \(String(reflecting: error))", category: category)
+
+                await MainActor.run {
+                    self.isRunning = false
+                    self.exitCode = 1
+                }
+
+                throw error
             }
-
-            // Use 'wine start /unix' to initialize GUI environment (like Whisky)
-            // This enables explorer.exe and allows GUI windows to display
-            let wineArgs = ["start", "/unix", self.url.path(percentEncoded: false)]
-            Logger.sojuKit.debug("🍷 Wine args: \(wineArgs)", category: category)
-
-            // Use empty loop to ignore output and just wait for process completion
-            // This prevents blocking on 'wine start /unix' which spawns background processes
-            // Pattern from Whisky (line 110-114)
-            // captureOutput: false prevents pipes from blocking GUI windows
-            for await _ in try podoSoju.runWine(
-                args: wineArgs,
-                workspace: workspace,
-                additionalEnv: additionalEnv,
-                captureOutput: false
-            ) { }
-
-            Logger.sojuKit.info("✅ Wine start command completed", category: category)
-        } catch {
-            Logger.sojuKit.critical("💥 Fatal error: \(error.localizedDescription)", category: category)
-            Logger.sojuKit.debug("Error details: \(String(reflecting: error))", category: category)
-
-            await MainActor.run {
-                self.isRunning = false
-                self.exitCode = 1
-            }
-
-            throw error
-        }
+        }.value
     }
 
     // MARK: - Equatable
