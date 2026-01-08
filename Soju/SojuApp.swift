@@ -52,6 +52,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 window.delegate = self
             }
         }
+
+        // SIGTERM 핸들러 - kill -15로 종료 시 Wine도 정리
+        signal(SIGTERM) { _ in
+            PodoSojuManager.shared.killAllWineProcesses()
+            exit(0)
+        }
     }
 
     /// 마지막 창이 닫히면 앱도 종료
