@@ -173,17 +173,20 @@ public final class PodoSojuManager: @unchecked Sendable {
     ///   - args: wine 인자 (예: ["--version"])
     ///   - workspace: 대상 Workspace
     ///   - additionalEnv: 추가 환경 변수
+    ///   - captureOutput: 출력 캡처 여부 (GUI 프로그램은 false로 설정)
     /// - Returns: 프로세스 출력 스트림
     public func runWine(
         args: [String],
         workspace: Workspace,
-        additionalEnv: [String: String] = [:]
+        additionalEnv: [String: String] = [:],
+        captureOutput: Bool = true
     ) throws -> AsyncStream<ProcessOutput> {
         try validate()
-        
+
         Logger.sojuKit.info("🍷 Running Wine with args: \(args.joined(separator: " "))", category: "PodoSoju")
         Logger.sojuKit.debug("Wine binary: \(wineBinary.path(percentEncoded: false))", category: "PodoSoju")
         Logger.sojuKit.debug("Working directory: \(workspace.url.path(percentEncoded: false))", category: "PodoSoju")
+        Logger.sojuKit.debug("Capture output: \(captureOutput)", category: "PodoSoju")
 
         let process = Process()
         process.executableURL = wineBinary
@@ -191,6 +194,14 @@ public final class PodoSojuManager: @unchecked Sendable {
         process.currentDirectoryURL = workspace.url
         process.environment = constructEnvironment(for: workspace, additionalEnv: additionalEnv)
         process.qualityOfService = .userInitiated
+
+        // wine start /unix는 GUI 프로세스를 포크하므로 출력 캡처하지 않음
+        // (파이프가 GUI 표시를 차단할 수 있음)
+        if !captureOutput {
+            process.standardOutput = nil
+            process.standardError = nil
+            Logger.sojuKit.info("🎨 GUI mode: output capture disabled", category: "PodoSoju")
+        }
 
         Logger.sojuKit.info("🚀 Starting Wine process...", category: "PodoSoju")
 

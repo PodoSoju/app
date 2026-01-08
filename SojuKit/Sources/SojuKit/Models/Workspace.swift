@@ -192,10 +192,12 @@ public class Program: Identifiable, Hashable, ObservableObject {
             // Use empty loop to ignore output and just wait for process completion
             // This prevents blocking on 'wine start /unix' which spawns background processes
             // Pattern from Whisky (line 110-114)
+            // captureOutput: false prevents pipes from blocking GUI windows
             for await _ in try podoSoju.runWine(
                 args: wineArgs,
                 workspace: workspace,
-                additionalEnv: additionalEnv
+                additionalEnv: additionalEnv,
+                captureOutput: false
             ) { }
 
             Logger.sojuKit.info("✅ Wine start command completed", category: category)
