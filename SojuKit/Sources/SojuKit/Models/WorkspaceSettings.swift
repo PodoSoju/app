@@ -15,6 +15,7 @@ public struct WorkspaceInfo: Codable, Equatable {
     var name: String = "My PC"
     var icon: String = "desktopcomputer"  // SF Symbol name
     var pinnedPrograms: [PinnedProgram] = []
+    var programOrder: [UUID] = []  // Custom ordering for grid-based layout
 
     public init() {}
 
@@ -23,6 +24,7 @@ public struct WorkspaceInfo: Codable, Equatable {
         self.name = try container.decodeIfPresent(String.self, forKey: .name) ?? "My PC"
         self.icon = try container.decodeIfPresent(String.self, forKey: .icon) ?? "desktopcomputer"
         self.pinnedPrograms = try container.decodeIfPresent([PinnedProgram].self, forKey: .pinnedPrograms) ?? []
+        self.programOrder = try container.decodeIfPresent([UUID].self, forKey: .programOrder) ?? []
     }
 }
 
@@ -108,6 +110,11 @@ public struct WorkspaceSettings: Codable, Equatable {
     public var pinnedPrograms: [PinnedProgram] {
         get { return info.pinnedPrograms }
         set { info.pinnedPrograms = newValue }
+    }
+
+    public var programOrder: [UUID] {
+        get { return info.programOrder }
+        set { info.programOrder = newValue }
     }
 
     public var wineVersion: SemanticVersion {

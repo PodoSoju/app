@@ -48,17 +48,20 @@ public enum DXVKHUD: String, Codable, Equatable {
 
 // MARK: - Pinned Program
 
-public struct PinnedProgram: Codable, Hashable, Equatable {
+public struct PinnedProgram: Codable, Hashable, Equatable, Identifiable {
+    public var id: UUID
     public var name: String
     public var url: URL?
 
-    public init(name: String, url: URL) {
+    public init(id: UUID = UUID(), name: String, url: URL) {
+        self.id = id
         self.name = name
         self.url = url
     }
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
         self.name = try container.decodeIfPresent(String.self, forKey: .name) ?? ""
         self.url = try container.decodeIfPresent(URL.self, forKey: .url)
     }
