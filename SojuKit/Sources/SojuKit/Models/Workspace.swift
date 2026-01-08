@@ -168,7 +168,8 @@ public class Program: Identifiable, Hashable, ObservableObject {
             let podoSoju = PodoSojuManager.shared
             Logger.sojuKit.debug("📦 PodoSojuManager acquired", category: category)
 
-            let wineArgs = ["start", "/unix", self.url.path(percentEncoded: false)]
+            // Direct execution without 'start' - runs in foreground and captures output
+            let wineArgs = [self.url.path(percentEncoded: false)]
             Logger.sojuKit.debug("🍷 Wine args: \(wineArgs)", category: category)
 
             for await processOutput in try podoSoju.runWine(args: wineArgs, workspace: workspace) {
