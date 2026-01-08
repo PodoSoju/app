@@ -14,6 +14,7 @@ struct ContentView: View {
     @State private var selectedWorkspace: Workspace?
     @State private var isCreatingWorkspace = false
     @State private var errorMessage: String?
+    @State private var showCreateWorkspace = false
 
     var body: some View {
         Group {
@@ -74,47 +75,61 @@ struct ContentView: View {
 
     // MARK: - Workspace Selection
     private var workspaceSelectionView: some View {
-        VStack(spacing: 30) {
-            Text("Select a Workspace")
-                .font(.largeTitle)
+        ZStack(alignment: .bottomTrailing) {
+            VStack(spacing: 30) {
+                Text("Select a Workspace")
+                    .font(.largeTitle)
 
-            ScrollView {
-                LazyVGrid(
-                    columns: [
-                        GridItem(.adaptive(minimum: 200, maximum: 300), spacing: 20, alignment: .top)
-                    ],
-                    alignment: .center,
-                    spacing: 20
-                ) {
-                    ForEach(workspaceManager.workspaces) { workspace in
-                        WorkspaceCard(workspace: workspace) {
-                            Logger.sojuKit.logWithFile("📂 Workspace selected: \(workspace.settings.name)", level: .info)
+                ScrollView {
+                    LazyVGrid(
+                        columns: [
+                            GridItem(.adaptive(minimum: 200, maximum: 300), spacing: 20, alignment: .top)
+                        ],
+                        alignment: .center,
+                        spacing: 20
+                    ) {
+                        ForEach(workspaceManager.workspaces) { workspace in
+                            WorkspaceCard(workspace: workspace) {
+                                Logger.sojuKit.logWithFile("📂 Workspace selected: \(workspace.settings.name)", level: .info)
 
-                            // Sync with WorkspaceManager for Wine environment setup
-                            workspaceManager.selectWorkspace(workspace)
+                                // Sync with WorkspaceManager for Wine environment setup
+                                workspaceManager.selectWorkspace(workspace)
 
-                            withAnimation {
-                                selectedWorkspace = workspace
+                                withAnimation {
+                                    selectedWorkspace = workspace
+                                }
+                                Logger.sojuKit.logWithFile("✅ Entered workspace: \(workspace.settings.name)", level: .debug)
                             }
-                            Logger.sojuKit.logWithFile("✅ Entered workspace: \(workspace.settings.name)", level: .debug)
+                            .frame(minWidth: 200, maxWidth: 300)
                         }
-                        .frame(minWidth: 200, maxWidth: 300)
                     }
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 40)
+                    .padding(.vertical, 20)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, 40)
-                .padding(.vertical, 20)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                Button("Back") {
+                    // TODO: Go back to main menu
+                    print("Back to main menu")
+                }
+                .buttonStyle(.bordered)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding()
 
-            Button("Back") {
-                // TODO: Go back to main menu
-                print("Back to main menu")
+            // + Button (floating bottom-right)
+            Button(action: { showCreateWorkspace = true }) {
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: 44))
+                    .foregroundColor(.accentColor)
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(.plain)
+            .padding(20)
+            .sheet(isPresented: $showCreateWorkspace) {
+                WorkspaceCreationView()
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding()
     }
 
     // MARK: - Actions
@@ -176,8 +191,8 @@ struct WorkspaceCard: View {
                 .stroke(Color.blue, lineWidth: 1)
         )
         .contentShape(Rectangle())
-        .onTapGesture {
-            Logger.sojuKit.logWithFile("🖱️ Workspace clicked: \(workspace.settings.name)", level: .info)
+        .onTapGesture(count: 2) {
+            Logger.sojuKit.logWithFile("🖱️ Workspace double-clicked: \(workspace.settings.name)", level: .info)
             Logger.sojuKit.logWithFile("📂 Entering workspace...", level: .debug)
             onSelect()
             Logger.sojuKit.logWithFile("✅ onSelect() called", level: .debug)

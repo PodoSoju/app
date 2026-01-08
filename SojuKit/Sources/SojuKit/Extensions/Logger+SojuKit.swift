@@ -51,7 +51,7 @@ public class LogConfig: ObservableObject {
         didSet { save() }
     }
 
-    public static let shared = LogConfig()
+    nonisolated(unsafe) public static let shared = LogConfig()
 
     private init() {
         self.enableFileLogging = UserDefaults.standard.object(forKey: "log.enableFile") as? Bool ?? true
