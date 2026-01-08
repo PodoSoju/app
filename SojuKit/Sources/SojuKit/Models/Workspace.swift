@@ -190,22 +190,8 @@ public final class Workspace: ObservableObject, Equatable, Hashable, Identifiabl
             }
         }
 
-        // 2단계: 매칭 안 되면 가장 최근 Wine 창 (fallback)
-        for app in wineApps {
-            let axApp = AXUIElementCreateApplication(app.processIdentifier)
-            var windowsRef: CFTypeRef?
-            let result = AXUIElementCopyAttributeValue(axApp, kAXWindowsAttribute as CFString, &windowsRef)
-
-            if result == .success, let windows = windowsRef as? [AXUIElement], let lastWindow = windows.last {
-                AXUIElementPerformAction(lastWindow, kAXRaiseAction as CFString)
-                AXUIElementSetAttributeValue(axApp, kAXFrontmostAttribute as CFString, true as CFTypeRef)
-                app.activate()
-                Logger.sojuKit.logWithFile("✅ Focused last Wine window (fallback)", level: .info)
-                return true
-            }
-        }
-
-        Logger.sojuKit.logWithFile("❌ No Wine windows found", level: .info)
+        // 매칭되는 창 못 찾음 - 계속 대기 (fallback 없음)
+        Logger.sojuKit.logWithFile("⏳ No matching window yet for: \(programName)", level: .info)
         return false
     }
 

@@ -21,29 +21,26 @@ struct ShortcutView: View {
 
     var body: some View {
         VStack(spacing: 8) {
-            ZStack {
-                iconView
-                    .frame(width: 45, height: 45)
-                    .scaleEffect(opening ? 2 : 1)
-                    .opacity(opening ? 0 : 1)
+            iconView
+                .frame(width: 45, height: 45)
+                .scaleEffect(opening ? 2 : 1)
+                .opacity(opening ? 0 : 1)
 
-                // Loading indicator
+            HStack(alignment: .firstTextBaseline, spacing: 3) {
                 if isLoading {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle())
-                        .scaleEffect(1.5)
-                        .frame(width: 45, height: 45)
-                        .background(Color.black.opacity(0.5))
-                        .cornerRadius(8)
+                        .scaleEffect(0.4)
+                        .frame(width: 8, height: 8)
                 }
-            }
 
-            Text(shortcut.name)
-                .font(.caption)
-                .foregroundStyle(.white)
-                .multilineTextAlignment(.center)
-                .lineLimit(2, reservesSpace: true)
-                .shadow(color: .black.opacity(0.5), radius: 1, x: 0, y: 1)
+                Text(shortcut.name)
+                    .font(.caption)
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2, reservesSpace: true)
+                    .shadow(color: .black.opacity(0.5), radius: 1, x: 0, y: 1)
+            }
         }
         .frame(width: 90, height: 90)
         .padding(10)
