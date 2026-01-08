@@ -8,6 +8,7 @@
 import Foundation
 import SwiftUI
 import AppKit
+import ApplicationServices
 import os.log
 
 public final class Workspace: ObservableObject, Equatable, Hashable, Identifiable, Comparable, @unchecked Sendable {
@@ -147,39 +148,76 @@ public final class Workspace: ObservableObject, Equatable, Hashable, Identifiabl
         Logger.sojuKit.info("Unregistered running program: \(url.lastPathComponent)", category: "Workspace")
     }
 
-    /// Focus an existing Wine window for the program
+    /// Focus an existing Wine window for the program using Accessibility API
     /// - Parameter url: Program URL
     /// - Returns: true if window was focused, false if not found
     @MainActor
     public func focusRunningProgram(_ url: URL) -> Bool {
-        let exeName = url.lastPathComponent
+        let exeName = url.deletingPathExtension().lastPathComponent.lowercased()
+        Logger.sojuKit.debug("Trying to focus window for: \(exeName)", category: "Workspace")
 
-        // pgrep으로 PID 찾기
-        guard let pid = PodoSojuManager.shared.getProcessPID(exeName: exeName) else {
-            Logger.sojuKit.debug("No running process found for: \(exeName)", category: "Workspace")
+        // Wine 프로세스 찾기
+        let wineApps = NSWorkspace.shared.runningApplications.filter {
+            $0.localizedName?.lowercased() == "wine"
+        }
+
+        guard !wineApps.isEmpty else {
+            Logger.sojuKit.debug("No Wine processes found", category: "Workspace")
             return false
         }
 
-        Logger.sojuKit.info("Found running process \(exeName) with PID: \(pid)", category: "Workspace")
+        // 각 Wine 프로세스의 창 검색
+        for app in wineApps {
+            let pid = app.processIdentifier
+            let axApp = AXUIElementCreateApplication(pid)
 
-        // AppleScript로 창 활성화 (Wine 프로세스는 NSRunningApplication으로 안 됨)
-        let script = """
-        tell application "System Events"
-            set frontmost of (first process whose unix id is \(pid)) to true
-        end tell
-        """
+            // 창 목록 가져오기
+            var windowsRef: CFTypeRef?
+            let result = AXUIElementCopyAttributeValue(axApp, kAXWindowsAttribute as CFString, &windowsRef)
 
-        var error: NSDictionary?
-        if let appleScript = NSAppleScript(source: script) {
-            appleScript.executeAndReturnError(&error)
-            if error == nil {
-                Logger.sojuKit.info("Successfully activated window for: \(exeName) (PID: \(pid))", category: "Workspace")
-                return true
-            } else {
-                Logger.sojuKit.warning("AppleScript error: \(error?.description ?? "unknown")", category: "Workspace")
+            guard result == .success, let windows = windowsRef as? [AXUIElement] else {
+                continue
+            }
+
+            // 창 제목에서 exeName 찾기
+            for window in windows {
+                var titleRef: CFTypeRef?
+                AXUIElementCopyAttributeValue(window, kAXTitleAttribute as CFString, &titleRef)
+                let title = (titleRef as? String)?.lowercased() ?? ""
+
+                // 창 제목에 프로그램 이름이 포함되어 있는지 확인
+                if title.contains(exeName) || exeName.contains("netfile") && title.contains("넷파일") {
+                    // 창 활성화 (AXRaise)
+                    let raiseResult = AXUIElementPerformAction(window, kAXRaiseAction as CFString)
+
+                    // 앱을 frontmost로 설정
+                    AXUIElementSetAttributeValue(axApp, kAXFrontmostAttribute as CFString, true as CFTypeRef)
+
+                    if raiseResult == .success {
+                        Logger.sojuKit.info("Successfully focused window: \(title) (PID: \(pid))", category: "Workspace")
+                        return true
+                    }
+                }
             }
         }
 
+        // 창 제목으로 못 찾으면 첫 번째 Wine 창이라도 활성화
+        for app in wineApps {
+            let pid = app.processIdentifier
+            let axApp = AXUIElementCreateApplication(pid)
+
+            var windowsRef: CFTypeRef?
+            let result = AXUIElementCopyAttributeValue(axApp, kAXWindowsAttribute as CFString, &windowsRef)
+
+            if result == .success, let windows = windowsRef as? [AXUIElement], let firstWindow = windows.first {
+                AXUIElementPerformAction(firstWindow, kAXRaiseAction as CFString)
+                AXUIElementSetAttributeValue(axApp, kAXFrontmostAttribute as CFString, true as CFTypeRef)
+                Logger.sojuKit.info("Focused first available Wine window (PID: \(pid))", category: "Workspace")
+                return true
+            }
+        }
+
+        Logger.sojuKit.debug("No Wine windows found to focus", category: "Workspace")
         return false
     }
 
