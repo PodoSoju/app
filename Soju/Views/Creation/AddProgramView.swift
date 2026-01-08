@@ -72,7 +72,7 @@ struct AddProgramView: View {
 
     // MARK: - Actions
     private func selectExecutable() {
-        Logger.sojuKit.logWithFile("Opening file picker for executable selection", level: .debug)
+        Logger.sojuKit.debug("Opening file picker for executable selection", category: "UI")
 
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = false
@@ -86,7 +86,7 @@ struct AddProgramView: View {
 
         panel.begin { response in
             if response == .OK, let url = panel.url {
-                Logger.sojuKit.logWithFile("Selected executable: \(url.lastPathComponent)", level: .info)
+                Logger.sojuKit.info("Selected executable: \(url.lastPathComponent)", category: "UI")
                 selectedFileURL = url
 
                 // Auto-fill program name if empty
@@ -99,11 +99,11 @@ struct AddProgramView: View {
 
     private func addProgram() {
         guard let url = selectedFileURL else {
-            Logger.sojuKit.logWithFile("Cannot add program: no file selected", level: .warning)
+            Logger.sojuKit.warning("Cannot add program: no file selected", category: "UI")
             return
         }
 
-        Logger.sojuKit.logWithFile("Adding program: \(programName) (\(url.lastPathComponent))", level: .info)
+        Logger.sojuKit.info("Adding program: \(programName) (\(url.lastPathComponent))", category: "UI")
 
         // TODO: Implement actual program addition to workspace.settings.pinnedPrograms
         // For now, just dismiss
@@ -111,13 +111,8 @@ struct AddProgramView: View {
         let program = PinnedProgram(name: programName, url: url)
         workspace.settings.pinnedPrograms.append(program)
 
-        // Save workspace settings
-        do {
-            try workspace.settings.encode(to: workspace.metadataURL)
-            Logger.sojuKit.logWithFile("Program added successfully", level: .info)
-        } catch {
-            Logger.sojuKit.logWithFile("Failed to save workspace settings: \(error.localizedDescription)", level: .error)
-        }
+        // Settings are automatically saved via Workspace.saveSettings() (called from settings didSet)
+        Logger.sojuKit.info("Program added successfully", category: "UI")
 
         dismiss()
     }

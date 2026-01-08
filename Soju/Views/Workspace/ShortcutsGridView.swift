@@ -10,13 +10,6 @@ import SojuKit
 import os.log
 import UniformTypeIdentifiers
 
-// MARK: - UTType Extension
-extension UTType {
-    static var exe: UTType {
-        UTType(filenameExtension: "exe") ?? .data
-    }
-}
-
 /// Grid-based shortcuts view with auto-sorting and file drop support
 struct ShortcutsGridView: View {
     @ObservedObject var workspace: Workspace
@@ -69,7 +62,7 @@ struct ShortcutsGridView: View {
 
     // MARK: - Actions
     private func loadShortcuts() {
-        Logger.sojuKit.logWithFile("Loading shortcuts for workspace: \(workspace.settings.name)", level: .info)
+        Logger.sojuKit.info("Loading shortcuts for workspace: \(workspace.settings.name)", category: "UI")
 
         // Load from workspace.settings.pinnedPrograms and sort alphabetically
         shortcuts = workspace.settings.pinnedPrograms.map { program in
@@ -81,43 +74,43 @@ struct ShortcutsGridView: View {
             )
         }.sorted()
 
-        Logger.sojuKit.logWithFile("Loaded \(shortcuts.count) shortcuts", level: .debug)
+        Logger.sojuKit.debug("Loaded \(shortcuts.count) shortcuts", category: "UI")
     }
 
     private func handleFileDrop(_ providers: [NSItemProvider]) -> Bool {
-        Logger.sojuKit.logWithFile("File drop detected (\(providers.count) items)", level: .info)
+        Logger.sojuKit.info("File drop detected (\(providers.count) items)", category: "UI")
 
         for provider in providers {
             provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier) { item, error in
                 if let error = error {
-                    Logger.sojuKit.logWithFile("Failed to load dropped file: \(error.localizedDescription)", level: .error)
+                    Logger.sojuKit.error("Failed to load dropped file: \(error.localizedDescription)", category: "UI")
                     return
                 }
 
                 guard let data = item as? Data,
                       let url = URL(dataRepresentation: data, relativeTo: nil) else {
-                    Logger.sojuKit.logWithFile("Invalid file drop data", level: .warning)
+                    Logger.sojuKit.warning("Invalid file drop data", category: "UI")
                     return
                 }
 
                 // Only execute .exe files
                 if url.pathExtension.lowercased() == "exe" {
-                    Logger.sojuKit.logWithFile("Executing dropped .exe file: \(url.lastPathComponent)", level: .info)
+                    Logger.sojuKit.info("Executing dropped .exe file: \(url.lastPathComponent)", category: "UI")
 
                     let program = Program(
                         name: url.deletingPathExtension().lastPathComponent,
                         url: url
                     )
 
-                    Task {
+                    Task { @MainActor in
                         do {
                             try await program.run(in: workspace)
                         } catch {
-                            Logger.sojuKit.logWithFile("Failed to run dropped program: \(error.localizedDescription)", level: .error)
+                            Logger.sojuKit.error("Failed to run dropped program: \(error.localizedDescription)", category: "UI")
                         }
                     }
                 } else {
-                    Logger.sojuKit.logWithFile("Dropped file is not an .exe, ignoring: \(url.pathExtension)", level: .debug)
+                    Logger.sojuKit.debug("Dropped file is not an .exe, ignoring: \(url.pathExtension)", category: "UI")
                 }
             }
         }
