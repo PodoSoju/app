@@ -43,6 +43,9 @@ struct ShortcutsGridView: View {
             }
         }
         .onAppear { loadShortcuts() }
+        .onChange(of: workspace.settings.pinnedPrograms) { _ in
+            loadShortcuts()
+        }
         .onDrop(of: [.fileURL], isTargeted: nil) { providers in
             handleFileDrop(providers)
         }

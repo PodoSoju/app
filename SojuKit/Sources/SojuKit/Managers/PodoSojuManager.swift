@@ -152,6 +152,10 @@ public final class PodoSojuManager {
         additionalEnv: [String: String] = [:]
     ) throws -> AsyncStream<ProcessOutput> {
         try validate()
+        
+        Logger.sojuKit.info("🍷 Running Wine with args: \(args.joined(separator: " "))", category: "PodoSoju")
+        Logger.sojuKit.debug("Wine binary: \(wineBinary.path(percentEncoded: false))", category: "PodoSoju")
+        Logger.sojuKit.debug("Working directory: \(workspace.url.path(percentEncoded: false))", category: "PodoSoju")
 
         let process = Process()
         process.executableURL = wineBinary
@@ -159,6 +163,8 @@ public final class PodoSojuManager {
         process.currentDirectoryURL = workspace.url
         process.environment = constructEnvironment(for: workspace, additionalEnv: additionalEnv)
         process.qualityOfService = .userInitiated
+
+        Logger.sojuKit.info("🚀 Starting Wine process...", category: "PodoSoju")
 
         return try process.runStream(name: args.joined(separator: " "))
     }
@@ -312,30 +318,56 @@ extension Process {
             Task {
                 continuation.yield(.started)
 
-                // stdout 읽기
-                Task {
-                    for try await line in stdoutPipe.fileHandleForReading.bytes.lines {
-                        continuation.yield(.message(line))
-                        fileHandle?.write(Data((line + "\n").utf8))
-                    }
-                }
-
-                // stderr 읽기
-                Task {
-                    for try await line in stderrPipe.fileHandleForReading.bytes.lines {
-                        continuation.yield(.error(line))
-                        fileHandle?.write(Data((line + "\n").utf8))
-                    }
-                }
-
+                // Start process
                 do {
                     try self.run()
-                    self.waitUntilExit()
-                    continuation.yield(.terminated(self.terminationStatus))
                 } catch {
-                    Logger.sojuKit.error("Process failed: \(error)")
+                    Logger.sojuKit.error("Failed to start process: \(error.localizedDescription)", category: "Process")
+                    continuation.yield(.terminated(-1))
+                    continuation.finish()
+                    return
                 }
 
+                // Use TaskGroup to ensure all output is read before termination
+                await withTaskGroup(of: Void.self) { group in
+                    // Read stdout
+                    group.addTask {
+                        do {
+                            for try await line in stdoutPipe.fileHandleForReading.bytes.lines {
+                                Logger.sojuKit.debug("📤 stdout: \(line)", category: "Process")
+                                continuation.yield(.message(line))
+                                fileHandle?.write(Data((line + "\n").utf8))
+                            }
+                        } catch {
+                            Logger.sojuKit.error("Error reading stdout: \(error.localizedDescription)", category: "Process")
+                        }
+                    }
+
+                    // Read stderr
+                    group.addTask {
+                        do {
+                            for try await line in stderrPipe.fileHandleForReading.bytes.lines {
+                                Logger.sojuKit.debug("📤 stderr: \(line)", category: "Process")
+                                continuation.yield(.error(line))
+                                fileHandle?.write(Data(("[ERROR] " + line + "\n").utf8))
+                            }
+                        } catch {
+                            Logger.sojuKit.error("Error reading stderr: \(error.localizedDescription)", category: "Process")
+                        }
+                    }
+
+                    // Wait for process to finish
+                    group.addTask {
+                        self.waitUntilExit()
+                    }
+
+                    // Wait for all tasks to complete
+                    await group.waitForAll()
+                }
+
+                // Only send terminated after all output is read
+                Logger.sojuKit.info("Process '\(name)' terminated with code \(self.terminationStatus)", category: "Process")
+                continuation.yield(.terminated(self.terminationStatus))
                 continuation.finish()
             }
         }

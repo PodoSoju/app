@@ -161,6 +161,13 @@ public class Program: Identifiable, Hashable, ObservableObject {
             self.isRunning = true
             self.exitCode = nil
             self.output = []
+            
+            // Add test output to verify the mechanism works
+            self.output.append("🧪 Test: Wine execution starting...")
+            self.output.append("Program: \(self.name)")
+            self.output.append("File: \(self.url.path(percentEncoded: false))")
+            
+            Logger.sojuKit.debug("✅ Test output added to array, count: \(self.output.count)", category: category)
         }
         Logger.sojuKit.debug("✅ State updated: isRunning=true", category: category)
 
