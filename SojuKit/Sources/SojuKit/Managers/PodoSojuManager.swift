@@ -426,6 +426,20 @@ public final class PodoSojuManager: @unchecked Sendable {
             }
         }
 
+        // GULIM.TTC (Google Open Source Gulim - 한글 폰트, OFL-1.1 라이센스)
+        let gulimSource = podoSojuFonts.appending(path: "GULIM.TTC")
+        let gulimDest = fontsDest.appending(path: "GULIM.TTC")
+        if FileManager.default.fileExists(atPath: gulimSource.path) &&
+           !FileManager.default.fileExists(atPath: gulimDest.path) {
+            do {
+                try FileManager.default.copyItem(at: gulimSource, to: gulimDest)
+                installedCount += 1
+                Logger.sojuKit.info("Installed GULIM.TTC from PodoSoju", category: "PodoSoju")
+            } catch {
+                Logger.sojuKit.warning("Failed to copy GULIM.TTC: \(error.localizedDescription)", category: "PodoSoju")
+            }
+        }
+
         if installedCount > 0 {
             Logger.sojuKit.info("CJK fonts installed: \(installedCount) fonts", category: "PodoSoju")
         } else {
