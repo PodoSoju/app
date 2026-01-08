@@ -57,7 +57,8 @@ public class WorkspaceManager: ObservableObject {
         icon: String = "desktopcomputer",
         windowsVersion: WinVersion = .win10
     ) async throws -> Workspace {
-        Logger.sojuKit.logWithFile("Creating workspace: '\(name)' with icon '\(icon)' and Windows version '\(windowsVersion)'", level: .info)
+        Logger.sojuKit.info("🏗️ Creating workspace: '\(name)'", category: "WorkspaceManager")
+        Logger.sojuKit.debug("Icon: '\(icon)', Windows version: '\(windowsVersion)'", category: "WorkspaceManager")
 
         // 1. Create workspace directory
         let workspaceURL = WorkspaceData.defaultWorkspacesDir
@@ -67,14 +68,14 @@ public class WorkspaceManager: ObservableObject {
             at: workspaceURL,
             withIntermediateDirectories: true
         )
-        Logger.sojuKit.logWithFile("Workspace directory created at: \(workspaceURL.path())", level: .debug)
+        Logger.sojuKit.debug("📁 Workspace directory created at: \(workspaceURL.path())", category: "WorkspaceManager")
 
         // 2. Initialize Wine prefix (placeholder - actual Wine integration needed)
         // This would be:
         // - Wine binary execution
         // - wineboot --init
         // - environment setup
-        Logger.sojuKit.logWithFile("Wine prefix initialization would happen here for: \(workspaceURL.path())", level: .info)
+        Logger.sojuKit.info("🍷 Wine prefix initialization would happen here", category: "WorkspaceManager")
 
         // 3. Create metadata
         var settings = WorkspaceSettings()
@@ -86,7 +87,7 @@ public class WorkspaceManager: ObservableObject {
             .appending(path: "Metadata")
             .appendingPathExtension("plist")
         try settings.encode(to: metadataURL)
-        Logger.sojuKit.logWithFile("Workspace metadata saved to: \(metadataURL.path())", level: .debug)
+        Logger.sojuKit.debug("💾 Workspace metadata saved to: \(metadataURL.path())", category: "WorkspaceManager")
 
         // 4. Register in WorkspaceData
         var data = WorkspaceData()
@@ -100,7 +101,7 @@ public class WorkspaceManager: ObservableObject {
             loadWorkspaces()
         }
 
-        Logger.sojuKit.logWithFile("Workspace '\(name)' created successfully", level: .info)
+        Logger.sojuKit.info("✅ Workspace '\(name)' created successfully", category: "WorkspaceManager")
         return workspace
     }
 
@@ -119,14 +120,24 @@ public class WorkspaceManager: ObservableObject {
 
     /// Select a workspace as current
     public func selectWorkspace(_ workspace: Workspace) {
-        Logger.sojuKit.logWithFile("Selecting workspace: '\(workspace.settings.name)'", level: .info)
+        Logger.sojuKit.info("🎯 Selecting workspace: '\(workspace.settings.name)'", category: "WorkspaceManager")
+        Logger.sojuKit.debug("Workspace URL: \(workspace.url.path(percentEncoded: false))", category: "WorkspaceManager")
+
         currentWorkspace = workspace
+        Logger.sojuKit.debug("✅ currentWorkspace updated", category: "WorkspaceManager")
 
         // Get Wine environment variables
         let env = workspace.wineEnvironment()
+        Logger.sojuKit.debug("🌍 Wine environment variables:", category: "WorkspaceManager")
 
-        // Launch Windows Explorer (placeholder - actual Wine integration needed)
-        Logger.sojuKit.logWithFile("Would launch Explorer with environment: \(env)", level: .info)
+        // Log Wine-related environment variables
+        for (key, value) in env.sorted(by: { $0.key < $1.key }) {
+            if key.starts(with: "WINE") || key == "WINEPREFIX" {
+                Logger.sojuKit.debug("  \(key)=\(value)", category: "WorkspaceManager")
+            }
+        }
+
+        Logger.sojuKit.info("🚀 Ready to launch programs in workspace", category: "WorkspaceManager")
     }
 
     // MARK: - Program Management

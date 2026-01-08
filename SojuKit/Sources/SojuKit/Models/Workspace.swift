@@ -144,8 +144,16 @@ public class Program: Identifiable, Hashable, ObservableObject {
 
     /// Run this program in the specified workspace
     public func run(in workspace: Workspace) async throws {
+        let executionId = UUID().uuidString.prefix(8)
+        let category = "Program[\(executionId)]"
+
+        Logger.sojuKit.info("🚀 Program execution started", category: category)
+        Logger.sojuKit.debug("Program: \(self.name)", category: category)
+        Logger.sojuKit.debug("URL: \(self.url.path(percentEncoded: false))", category: category)
+        Logger.sojuKit.debug("Workspace: \(workspace.settings.name)", category: category)
+
         guard !isRunning else {
-            Logger.sojuKit.warning("Program \(self.name) is already running")
+            Logger.sojuKit.warning("⚠️ Program already running, ignoring request", category: category)
             return
         }
 
@@ -154,46 +162,51 @@ public class Program: Identifiable, Hashable, ObservableObject {
             self.exitCode = nil
             self.output = []
         }
-
-        Logger.sojuKit.info("Starting program: \(self.name) at \(self.url.path)")
+        Logger.sojuKit.debug("✅ State updated: isRunning=true", category: category)
 
         do {
             let podoSoju = PodoSojuManager.shared
+            Logger.sojuKit.debug("📦 PodoSojuManager acquired", category: category)
 
-            for await processOutput in try podoSoju.runWine(
-                args: ["start", "/unix", self.url.path(percentEncoded: false)],
-                workspace: workspace
-            ) {
+            let wineArgs = ["start", "/unix", self.url.path(percentEncoded: false)]
+            Logger.sojuKit.debug("🍷 Wine args: \(wineArgs)", category: category)
+
+            for await processOutput in try podoSoju.runWine(args: wineArgs, workspace: workspace) {
                 switch processOutput {
                 case .message(let message):
+                    Logger.sojuKit.debug("📤 Output: \(message)", category: category)
                     await MainActor.run {
                         self.output.append(message)
                     }
                 case .error(let error):
+                    Logger.sojuKit.error("❌ Error: \(error)", category: category)
                     await MainActor.run {
                         self.output.append("ERROR: \(error)")
                     }
                 case .terminated(let code):
+                    Logger.sojuKit.info("🏁 Terminated with code \(code)", category: category)
                     await MainActor.run {
                         self.isRunning = false
                         self.exitCode = code
                     }
                     if code == 0 {
-                        Logger.sojuKit.info("Program \(self.name) completed successfully")
+                        Logger.sojuKit.info("✅ Program completed successfully", category: category)
                     } else {
-                        Logger.sojuKit.error("Program \(self.name) exited with code \(code)")
+                        Logger.sojuKit.error("⚠️ Program exited with error code \(code)", category: category)
                     }
                 case .started:
-                    Logger.sojuKit.info("Program \(self.name) started")
+                    Logger.sojuKit.info("▶️ Process started", category: category)
                 }
             }
         } catch {
+            Logger.sojuKit.critical("💥 Fatal error: \(error.localizedDescription)", category: category)
+            Logger.sojuKit.debug("Error details: \(String(reflecting: error))", category: category)
+
             await MainActor.run {
                 self.isRunning = false
                 self.exitCode = 1
             }
 
-            Logger.sojuKit.error("Program \(self.name) failed: \(error.localizedDescription)")
             throw error
         }
     }
