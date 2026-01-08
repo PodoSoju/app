@@ -211,23 +211,36 @@ public final class PodoSojuManager: @unchecked Sendable {
         process.environment = constructEnvironment(for: workspace)
         process.qualityOfService = .userInitiated
 
-        for await output in try process.runStream(name: "wineboot --init") {
-            switch output {
-            case .message(let message):
-                Logger.sojuKit.debug("[wineboot] \(message)")
-            case .error(let error):
-                Logger.sojuKit.error("[wineboot] \(error)")
-            case .started:
-                Logger.sojuKit.info("wineboot started")
-            case .terminated(let code):
-                if code == 0 {
-                    Logger.sojuKit.info("wineboot completed successfully")
-                } else {
-                    Logger.sojuKit.error("wineboot failed with exit code \(code)")
-                    throw PodoSojuError.winebootFailed(code)
-                }
-            }
+        // wineboot은 백그라운드에서 실행되므로 출력을 무시하고 분리 모드로 실행
+        process.standardOutput = nil
+        process.standardError = nil
+
+        do {
+            try process.run()
+            Logger.sojuKit.info("wineboot process started in background")
+        } catch {
+            Logger.sojuKit.error("Failed to start wineboot: \(error.localizedDescription)")
+            throw PodoSojuError.winebootFailed(-1)
         }
+
+        // drive_c 디렉토리가 생성될 때까지 대기 (최대 10초)
+        let driveCPath = (workspace.winePrefixPath as NSString).appendingPathComponent("drive_c")
+        let maxAttempts = 100 // 100 * 100ms = 10초
+        var attempts = 0
+
+        while attempts < maxAttempts {
+            if FileManager.default.fileExists(atPath: driveCPath) {
+                Logger.sojuKit.info("Wine prefix initialized successfully (drive_c created)")
+                return
+            }
+
+            try await Task.sleep(nanoseconds: 100_000_000) // 100ms
+            attempts += 1
+        }
+
+        // 타임아웃 후에도 drive_c가 없으면 실패
+        Logger.sojuKit.error("wineboot timeout: drive_c directory not created after 10 seconds")
+        throw PodoSojuError.winebootFailed(-1)
     }
 
     /// wineserver 실행
