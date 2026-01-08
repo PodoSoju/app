@@ -45,11 +45,13 @@ public final class PodoSojuManager {
     // MARK: - Initialization
 
     private init() {
-        // ~/Library/Application Support/com.soju.app/PodoSoju
-        let appSupport = FileManager.default.urls(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask
-        ).first!
+        // Get real home directory (not sandboxed path)
+        // In sandboxed apps, .applicationSupportDirectory returns containerized path
+        // We need the actual ~/Library/Application Support outside the sandbox
+        let realHome = FileManager.default.homeDirectoryForCurrentUser
+        let appSupport = realHome
+            .appending(path: "Library")
+            .appending(path: "Application Support")
 
         self.podoSojuRoot = appSupport
             .appending(path: "com.soju.app")
