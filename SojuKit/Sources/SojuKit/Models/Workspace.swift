@@ -184,8 +184,9 @@ public class Program: Identifiable, Hashable, ObservableObject {
                 additionalEnv["WINEDEBUG"] = "warn+all"
             }
 
-            // Direct execution without 'start' - runs in foreground and captures output
-            let wineArgs = [self.url.path(percentEncoded: false)]
+            // Use 'wine start /unix' to initialize GUI environment (like Whisky)
+            // This enables explorer.exe and allows GUI windows to display
+            let wineArgs = ["start", "/unix", self.url.path(percentEncoded: false)]
             Logger.sojuKit.debug("🍷 Wine args: \(wineArgs)", category: category)
 
             for await processOutput in try podoSoju.runWine(

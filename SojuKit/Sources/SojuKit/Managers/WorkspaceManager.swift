@@ -70,12 +70,17 @@ public class WorkspaceManager: ObservableObject {
         )
         Logger.sojuKit.debug("📁 Workspace directory created at: \(workspaceURL.path())", category: "WorkspaceManager")
 
-        // 2. Initialize Wine prefix (placeholder - actual Wine integration needed)
-        // This would be:
-        // - Wine binary execution
-        // - wineboot --init
-        // - environment setup
-        Logger.sojuKit.info("🍷 Wine prefix initialization would happen here", category: "WorkspaceManager")
+        // 2. Initialize Wine prefix
+        Logger.sojuKit.info("🍷 Initializing Wine prefix with wineboot...", category: "WorkspaceManager")
+
+        let tempWorkspace = Workspace(workspaceUrl: workspaceURL, isAvailable: true)
+        do {
+            try await PodoSojuManager.shared.runWineboot(workspace: tempWorkspace)
+            Logger.sojuKit.info("✅ Wine prefix initialized successfully", category: "WorkspaceManager")
+        } catch {
+            Logger.sojuKit.error("❌ Failed to initialize Wine prefix: \(error)", category: "WorkspaceManager")
+            throw error
+        }
 
         // 3. Create metadata
         var settings = WorkspaceSettings()
