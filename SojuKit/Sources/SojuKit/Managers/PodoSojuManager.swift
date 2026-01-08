@@ -383,7 +383,9 @@ public final class PodoSojuManager: @unchecked Sendable {
         let baseFonts: [(path: String, name: String)] = [
             ("/System/Library/Fonts/Helvetica.ttc", "Helvetica.ttc"),
             ("/System/Library/Fonts/Geneva.ttf", "Geneva.ttf"),
-            ("/Library/Fonts/Arial Unicode.ttf", "Arial Unicode.ttf")
+            ("/Library/Fonts/Arial Unicode.ttf", "Arial Unicode.ttf"),
+            ("/System/Library/Fonts/Supplemental/Tahoma.ttf", "Tahoma.ttf"),
+            ("/System/Library/Fonts/Supplemental/Tahoma Bold.ttf", "Tahoma Bold.ttf")
         ]
 
         for font in baseFonts {
