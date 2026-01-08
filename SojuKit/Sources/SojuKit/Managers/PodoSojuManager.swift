@@ -377,14 +377,40 @@ public final class PodoSojuManager: @unchecked Sendable {
             )
         }
 
+        var installedCount = 0
+
+        // 기본 폰트 (다이얼로그, 메뉴 등에 필요)
+        let baseFonts: [(path: String, name: String)] = [
+            ("/System/Library/Fonts/Helvetica.ttc", "Helvetica.ttc"),
+            ("/System/Library/Fonts/Geneva.ttf", "Geneva.ttf"),
+            ("/Library/Fonts/Arial Unicode.ttf", "Arial Unicode.ttf")
+        ]
+
+        for font in baseFonts {
+            let source = URL(fileURLWithPath: font.path)
+            let dest = fontsDest.appending(path: font.name)
+
+            if FileManager.default.fileExists(atPath: dest.path) {
+                continue
+            }
+
+            if FileManager.default.fileExists(atPath: source.path) {
+                do {
+                    try FileManager.default.copyItem(at: source, to: dest)
+                    installedCount += 1
+                    Logger.sojuKit.debug("Installed base font: \(font.name)", category: "PodoSoju")
+                } catch {
+                    Logger.sojuKit.warning("Failed to copy \(font.name): \(error.localizedDescription)", category: "PodoSoju")
+                }
+            }
+        }
+
         // macOS system Korean fonts to install
         let systemFontsPath = "/System/Library/Fonts/Supplemental"
         let fontsToInstall = [
             "AppleGothic.ttf",
             "AppleMyungjo.ttf"
         ]
-
-        var installedCount = 0
         for fontName in fontsToInstall {
             let source = URL(fileURLWithPath: systemFontsPath).appending(path: fontName)
             let dest = fontsDest.appending(path: fontName)
