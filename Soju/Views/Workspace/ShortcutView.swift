@@ -17,6 +17,7 @@ struct ShortcutView: View {
     @State private var isLoading = false
     @State private var showError = false
     @State private var errorMessage = ""
+    @State private var showDeleteConfirmation = false
 
     var body: some View {
         VStack(spacing: 8) {
@@ -55,10 +56,23 @@ struct ShortcutView: View {
                 // TODO: Implement rename functionality
                 Logger.sojuKit.logWithFile("Rename requested for: \(shortcut.name)", level: .debug)
             }
-            Button("Remove", systemImage: "trash") {
-                // TODO: Implement remove functionality
-                Logger.sojuKit.logWithFile("Remove requested for: \(shortcut.name)", level: .debug)
+            Button(role: .destructive) {
+                showDeleteConfirmation = true
+            } label: {
+                Label("Delete", systemImage: "trash")
             }
+        }
+        .confirmationDialog(
+            "Delete \"\(shortcut.name)\"?",
+            isPresented: $showDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                deleteShortcut()
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("This will remove the shortcut from your workspace.")
         }
         .alert("실행 오류", isPresented: $showError) {
             Button("확인", role: .cancel) { }
@@ -81,24 +95,37 @@ struct ShortcutView: View {
 
     // MARK: - Actions
     private func runProgram() {
-        Logger.sojuKit.logWithFile("Double-tap detected on shortcut: \(shortcut.name)", level: .info)
-
-        // Check if program is already running
-        if workspace.isProgramRunning(shortcut.url) {
-            Logger.sojuKit.logWithFile("Program already running, focusing: \(shortcut.name)", level: .info)
-
-            // Focus the existing window
-            if workspace.focusRunningProgram(shortcut.url) {
-                Logger.sojuKit.logWithFile("Successfully focused: \(shortcut.name)", level: .info)
+        Task {
+            // .lnk 파일이면 실제 exe 경로 추출
+            let exeName: String
+            if shortcut.url.pathExtension.lowercased() == "lnk" {
+                if let targetURL = try? await ShortcutParser.parseShortcut(shortcut.url, winePrefixURL: workspace.winePrefixURL) {
+                    exeName = targetURL.lastPathComponent
+                } else {
+                    exeName = shortcut.url.lastPathComponent
+                }
             } else {
-                Logger.sojuKit.logWithFile("Failed to focus, launching new instance: \(shortcut.name)", level: .info)
-                // Fall through to launch if focus failed
+                exeName = shortcut.url.lastPathComponent
+            }
+
+            // pgrep으로 실제 실행 중인지 확인
+            if PodoSojuManager.shared.isProcessRunning(exeName: exeName) {
+                Logger.sojuKit.logWithFile("Program already running (pgrep): \(exeName)", level: .info)
+
+                // 이미 실행 중 -> 포커스만
+                await MainActor.run {
+                    if workspace.focusRunningProgram(shortcut.url) {
+                        Logger.sojuKit.logWithFile("Successfully focused: \(shortcut.name)", level: .info)
+                    }
+                }
+                return
+            }
+
+            // 실행 중 아님 -> 새로 실행
+            await MainActor.run {
                 launchProgram()
             }
-            return
         }
-
-        launchProgram()
     }
 
     private func launchProgram() {
@@ -137,6 +164,18 @@ struct ShortcutView: View {
                 isLoading = false
             }
         }
+    }
+
+    private func deleteShortcut() {
+        // 1. pinnedPrograms에서 제거 (전체 배열 재할당으로 didSet 트리거)
+        workspace.settings.pinnedPrograms = workspace.settings.pinnedPrograms.filter { $0.url != shortcut.url }
+
+        // 2. Desktop의 .lnk 파일이면 실제 파일도 삭제
+        if shortcut.url.pathExtension.lowercased() == "lnk" {
+            try? FileManager.default.removeItem(at: shortcut.url)
+        }
+
+        Logger.sojuKit.logWithFile("Deleted shortcut: \(shortcut.name)", level: .info)
     }
 }
 

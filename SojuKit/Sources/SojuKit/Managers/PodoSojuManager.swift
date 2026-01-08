@@ -447,21 +447,92 @@ public final class PodoSojuManager: @unchecked Sendable {
         }
     }
 
+    // MARK: - Process Detection
+
+    /// 특정 exe가 실행 중인지 확인
+    public func isProcessRunning(exeName: String) -> Bool {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/pgrep")
+        process.arguments = ["-f", exeName]
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+            return process.terminationStatus == 0
+        } catch {
+            return false
+        }
+    }
+
+    /// 특정 exe의 PID 가져오기
+    public func getProcessPID(exeName: String) -> pid_t? {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/pgrep")
+        process.arguments = ["-f", exeName]
+
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = FileHandle.nullDevice
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            if let output = String(data: data, encoding: .utf8)?
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+               let pid = Int32(output.components(separatedBy: .newlines).first ?? "") {
+                return pid
+            }
+        } catch { }
+        return nil
+    }
+
     // MARK: - Process Cleanup
 
     /// 모든 Wine 관련 프로세스 종료
     /// 앱 종료 시 호출하여 orphan 프로세스 방지
     public func killAllWineProcesses() {
-        Logger.sojuKit.info("🧹 Killing all Wine processes...", category: "PodoSoju")
+        Logger.sojuKit.logWithFile("🧹 killAllWineProcesses() called", level: .info)
 
-        // wineserver 종료 (이것이 모든 Wine 프로세스를 정리함)
-        killProcess(named: "wineserver")
+        // 1. Windows 프로세스 강제 종료 (C:\ 경로로 실행된 프로세스)
+        Logger.sojuKit.logWithFile("Killing Windows processes...", level: .debug)
+        forceKillProcess(pattern: "C:\\\\Program")
+        forceKillProcess(pattern: "C:\\\\windows")
+        forceKillProcess(pattern: "C:\\\\users")
 
-        // wine64 프로세스도 명시적으로 종료 (혹시 남아있는 경우)
-        killProcess(named: "wine64")
-        killProcess(named: "wine")
+        // 2. Wine 관련 프로세스 강제 종료
+        Logger.sojuKit.logWithFile("Killing Wine processes...", level: .debug)
+        forceKillProcess(pattern: "wineserver")
+        forceKillProcess(pattern: "wine64")
+        forceKillProcess(pattern: "winedevice")
+        forceKillProcess(pattern: "services.exe")
+        forceKillProcess(pattern: "plugplay.exe")
+        forceKillProcess(pattern: "svchost.exe")
+        forceKillProcess(pattern: "rpcss.exe")
+        forceKillProcess(pattern: "explorer.exe")
 
-        Logger.sojuKit.info("✅ Wine process cleanup completed", category: "PodoSoju")
+        Logger.sojuKit.logWithFile("✅ killAllWineProcesses() completed", level: .info)
+    }
+
+    /// 프로세스 강제 종료 (SIGKILL)
+    private func forceKillProcess(pattern: String) {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/pkill")
+        process.arguments = ["-9", "-f", pattern]
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+            let status = process.terminationStatus
+            Logger.sojuKit.logWithFile("pkill -9 -f '\(pattern)' → exit \(status)", level: .debug)
+        } catch {
+            Logger.sojuKit.logWithFile("pkill failed for '\(pattern)': \(error)", level: .error)
+        }
     }
 
     /// 특정 이름의 프로세스 종료

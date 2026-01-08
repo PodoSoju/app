@@ -152,34 +152,34 @@ public final class Workspace: ObservableObject, Equatable, Hashable, Identifiabl
     /// - Returns: true if window was focused, false if not found
     @MainActor
     public func focusRunningProgram(_ url: URL) -> Bool {
-        Logger.sojuKit.info("Attempting to focus: \(url.lastPathComponent)", category: "Workspace")
+        let exeName = url.lastPathComponent
 
-        // Find Wine-related running applications
-        let runningApps = NSWorkspace.shared.runningApplications
-        let wineApps = runningApps.filter { app in
-            guard let bundleId = app.bundleIdentifier else {
-                // Wine processes often don't have bundle IDs
-                // Check by executable name
-                let nameContainsWine = app.localizedName?.lowercased().contains("wine") == true
-                let execContainsWine = app.executableURL?.lastPathComponent.lowercased().contains("wine") == true
-                return nameContainsWine || execContainsWine
-            }
-            return bundleId.lowercased().contains("wine") ||
-                   bundleId.lowercased().contains("crossover")
+        // pgrep으로 PID 찾기
+        guard let pid = PodoSojuManager.shared.getProcessPID(exeName: exeName) else {
+            Logger.sojuKit.debug("No running process found for: \(exeName)", category: "Workspace")
+            return false
         }
 
-        Logger.sojuKit.debug("Found \(wineApps.count) Wine-related apps", category: "Workspace")
+        Logger.sojuKit.info("Found running process \(exeName) with PID: \(pid)", category: "Workspace")
 
-        // Try to activate any Wine app (they share windows)
-        for app in wineApps {
-            if app.activate(options: [.activateIgnoringOtherApps]) {
-                Logger.sojuKit.info("Activated Wine app: \(app.localizedName ?? "unknown")", category: "Workspace")
+        // AppleScript로 창 활성화 (Wine 프로세스는 NSRunningApplication으로 안 됨)
+        let script = """
+        tell application "System Events"
+            set frontmost of (first process whose unix id is \(pid)) to true
+        end tell
+        """
+
+        var error: NSDictionary?
+        if let appleScript = NSAppleScript(source: script) {
+            appleScript.executeAndReturnError(&error)
+            if error == nil {
+                Logger.sojuKit.info("Successfully activated window for: \(exeName) (PID: \(pid))", category: "Workspace")
                 return true
+            } else {
+                Logger.sojuKit.warning("AppleScript error: \(error?.description ?? "unknown")", category: "Workspace")
             }
         }
 
-        // Skip AppleScript fallback - just return false
-        // AppleScript requires accessibility permissions which may cause issues
         return false
     }
 
