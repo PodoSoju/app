@@ -53,7 +53,7 @@ public final class SojuManager: @unchecked Sendable {
             fatalError("Cannot access Application Support directory")
         }
 
-        let bundleId = Bundle.main.bundleIdentifier ?? "com.soju.app"
+        let bundleId = Bundle.main.bundleIdentifier ?? "com.podosoju.app"
 
         self.sojuRoot = appSupport
             .appending(path: bundleId)

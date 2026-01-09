@@ -14,7 +14,7 @@ public struct WorkspaceData: Codable {
     public static let containerDir = FileManager.default.homeDirectoryForCurrentUser
         .appending(path: "Library")
         .appending(path: "Containers")
-        .appending(path: "com.soju.app")  // Bundle ID
+        .appending(path: "com.podosoju.app")  // Bundle ID
 
     public static let workspaceEntriesFile = containerDir
         .appending(path: "WorkspaceEntries")

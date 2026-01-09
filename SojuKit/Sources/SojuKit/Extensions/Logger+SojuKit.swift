@@ -77,7 +77,7 @@ public class LogConfig: ObservableObject {
 extension Logger {
     /// Logger for SojuKit framework
     public static let sojuKit = Logger(
-        subsystem: "com.soju.app",
+        subsystem: "com.podosoju.app",
         category: "SojuKit"
     )
 
