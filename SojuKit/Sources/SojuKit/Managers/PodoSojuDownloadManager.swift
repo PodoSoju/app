@@ -73,9 +73,9 @@ public final class PodoSojuDownloadManager: ObservableObject {
 
     // MARK: - Constants
 
-    private let githubOwner = "nicemenu"
+    private let githubOwner = "yejune"
     private let githubRepo = "podo-soju"
-    private let assetNamePattern = "podo-soju"  // tar.gz 파일명에 포함될 패턴
+    private let assetNamePattern = "PodoSoju"  // tar.gz 파일명에 포함될 패턴
 
     // MARK: - Published Properties
 
@@ -186,9 +186,10 @@ public final class PodoSojuDownloadManager: ObservableObject {
 
     // MARK: - Private Methods
 
-    /// GitHub API에서 최신 릴리즈 정보 가져오기
+    /// GitHub API에서 최신 릴리즈 정보 가져오기 (prerelease 포함)
     private func fetchLatestRelease() async throws -> GitHubRelease {
-        let urlString = "https://api.github.com/repos/\(githubOwner)/\(githubRepo)/releases/latest"
+        // /releases/latest는 prerelease를 제외하므로, /releases를 사용
+        let urlString = "https://api.github.com/repos/\(githubOwner)/\(githubRepo)/releases"
         guard let url = URL(string: urlString) else {
             throw DownloadError.networkError(URLError(.badURL))
         }
@@ -203,10 +204,6 @@ public final class PodoSojuDownloadManager: ObservableObject {
             throw DownloadError.networkError(URLError(.badServerResponse))
         }
 
-        if httpResponse.statusCode == 404 {
-            throw DownloadError.noReleaseFound
-        }
-
         guard httpResponse.statusCode == 200 else {
             if let errorResponse = try? JSONDecoder().decode(GitHubErrorResponse.self, from: data) {
                 throw DownloadError.downloadFailed(errorResponse.message)
@@ -216,7 +213,13 @@ public final class PodoSojuDownloadManager: ObservableObject {
 
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        return try decoder.decode(GitHubRelease.self, from: data)
+        let releases = try decoder.decode([GitHubRelease].self, from: data)
+
+        guard let latestRelease = releases.first else {
+            throw DownloadError.noReleaseFound
+        }
+
+        return latestRelease
     }
 
     /// 파일 다운로드
@@ -281,7 +284,7 @@ public final class PodoSojuDownloadManager: ObservableObject {
         // tar 명령어로 압축 해제
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/tar")
-        process.arguments = ["-xzf", archiveURL.path, "-C", librariesPath.path]
+        process.arguments = ["-xzf", archiveURL.path, "-C", librariesPath.path, "--strip-components=1"]
         process.standardOutput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice
 
