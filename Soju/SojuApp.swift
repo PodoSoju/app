@@ -12,10 +12,12 @@ import os.log
 @main
 struct SojuApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @State private var showAbout = false
+    @State private var showSettings = false
 
     init() {
         // Log app launch to file
-        Logger.sojuKit.info("🍶 Soju app launched")
+        Logger.sojuKit.info("🍇 PodoSoju app launched")
         Logger.sojuKit.info("📋 Log file location: \(Logger.logFileURL.path)")
     }
 
@@ -26,15 +28,28 @@ struct SojuApp: App {
                 .onAppear {
                     Logger.sojuKit.info("🪟 Main window appeared")
                 }
+                .sheet(isPresented: $showAbout) {
+                    AboutView()
+                }
+                .sheet(isPresented: $showSettings) {
+                    SettingsView()
+                }
         }
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)
         .defaultSize(width: 1280, height: 800)
         .commands {
             CommandGroup(replacing: .appInfo) {
-                Button("About Soju") {
-                    // TODO: Show about window
+                Button("About PodoSoju") {
+                    showAbout = true
                 }
+            }
+            CommandGroup(after: .appInfo) {
+                Divider()
+                Button("Settings...") {
+                    showSettings = true
+                }
+                .keyboardShortcut(",", modifiers: .command)
             }
         }
     }
@@ -130,7 +145,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        Logger.sojuKit.info("👋 Soju app terminated")
+        Logger.sojuKit.info("👋 PodoSoju app terminated")
     }
 
     /// Wine 프로세스 개수 확인
