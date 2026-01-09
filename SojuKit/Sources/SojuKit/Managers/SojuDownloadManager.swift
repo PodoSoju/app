@@ -1,5 +1,5 @@
 //
-//  PodoSojuDownloadManager.swift
+//  SojuDownloadManager.swift
 //  SojuKit
 //
 //  Created on 2026-01-09.
@@ -62,20 +62,20 @@ public enum DownloadError: LocalizedError {
     }
 }
 
-// MARK: - PodoSoju Download Manager
+// MARK: - Soju Download Manager
 
-/// PodoSoju GitHub 릴리즈 다운로드 및 설치 관리자
+/// Soju GitHub 릴리즈 다운로드 및 설치 관리자
 @MainActor
-public final class PodoSojuDownloadManager: ObservableObject {
+public final class SojuDownloadManager: ObservableObject {
     // MARK: - Singleton
 
-    public static let shared = PodoSojuDownloadManager()
+    public static let shared = SojuDownloadManager()
 
     // MARK: - Constants
 
-    private let githubOwner = "yejune"
-    private let githubRepo = "podo-soju"
-    private let assetNamePattern = "PodoSoju"  // tar.gz 파일명에 포함될 패턴
+    private let githubOwner = "PodoSoju"
+    private let githubRepo = "soju"
+    private let assetNamePattern = "Soju"  // tar.gz 파일명에 포함될 패턴
 
     // MARK: - Published Properties
 
@@ -120,7 +120,7 @@ public final class PodoSojuDownloadManager: ObservableObject {
                 }
             } else {
                 // 설치 안됨
-                Logger.sojuKit.info("PodoSoju not installed, latest version: \(release.version)", category: "Download")
+                Logger.sojuKit.info("Soju not installed, latest version: \(release.version)", category: "Download")
                 state = .idle
                 return release
             }
@@ -165,7 +165,7 @@ public final class PodoSojuDownloadManager: ObservableObject {
         // 완료
         currentVersion = release.version
         state = .completed
-        Logger.sojuKit.info("PodoSoju \(release.version) installed successfully", category: "Download")
+        Logger.sojuKit.info("Soju \(release.version) installed successfully", category: "Download")
     }
 
     /// 다운로드 취소
@@ -181,7 +181,7 @@ public final class PodoSojuDownloadManager: ObservableObject {
 
     /// 설치 여부 확인
     public var isInstalled: Bool {
-        return PodoSojuManager.shared.isInstalled
+        return SojuManager.shared.isInstalled
     }
 
     // MARK: - Private Methods
@@ -243,7 +243,7 @@ public final class PodoSojuDownloadManager: ObservableObject {
 
                 // 임시 디렉토리로 복사
                 let tempDir = FileManager.default.temporaryDirectory
-                let destURL = tempDir.appending(path: "podo-soju-\(UUID().uuidString).tar.gz")
+                let destURL = tempDir.appending(path: "soju-\(UUID().uuidString).tar.gz")
 
                 do {
                     try FileManager.default.moveItem(at: localURL, to: destURL)
@@ -268,12 +268,12 @@ public final class PodoSojuDownloadManager: ObservableObject {
 
     /// tar.gz 압축 해제 및 설치
     private func extractAndInstall(_ archiveURL: URL, version: String) async throws {
-        let librariesPath = PodoSojuManager.shared.podoSojuRoot.deletingLastPathComponent()
-        let podoSojuPath = PodoSojuManager.shared.podoSojuRoot
+        let librariesPath = SojuManager.shared.sojuRoot.deletingLastPathComponent()
+        let sojuPath = SojuManager.shared.sojuRoot
 
         // 기존 설치 제거
-        if FileManager.default.fileExists(atPath: podoSojuPath.path) {
-            try FileManager.default.removeItem(at: podoSojuPath)
+        if FileManager.default.fileExists(atPath: sojuPath.path) {
+            try FileManager.default.removeItem(at: sojuPath)
         }
 
         // Libraries 디렉토리 생성
@@ -296,11 +296,11 @@ public final class PodoSojuDownloadManager: ObservableObject {
         }
 
         // 압축 해제된 디렉토리 이름 확인 및 이름 변경
-        // podo-soju-x.x.x 형태로 압축 해제될 수 있음
+        // soju-x.x.x 형태로 압축 해제될 수 있음
         let contents = try FileManager.default.contentsOfDirectory(at: librariesPath, includingPropertiesForKeys: nil)
-        if let extractedDir = contents.first(where: { $0.lastPathComponent.hasPrefix("podo-soju") && $0.lastPathComponent != "PodoSoju" }) {
-            // PodoSoju로 이름 변경
-            try FileManager.default.moveItem(at: extractedDir, to: podoSojuPath)
+        if let extractedDir = contents.first(where: { $0.lastPathComponent.hasPrefix("soju") && $0.lastPathComponent != "Soju" }) {
+            // Soju로 이름 변경
+            try FileManager.default.moveItem(at: extractedDir, to: sojuPath)
         }
 
         state = .installing
@@ -311,18 +311,18 @@ public final class PodoSojuDownloadManager: ObservableObject {
         // 임시 파일 정리
         try? FileManager.default.removeItem(at: archiveURL)
 
-        Logger.sojuKit.info("PodoSoju extracted to \(podoSojuPath.path)", category: "Download")
+        Logger.sojuKit.info("Soju extracted to \(sojuPath.path)", category: "Download")
     }
 
     /// 현재 설치된 버전 로드
     private func loadCurrentVersion() {
-        currentVersion = PodoSojuManager.shared.version?.versionString
+        currentVersion = SojuManager.shared.version?.versionString
     }
 
     /// 버전 정보 저장
     private func saveVersion(_ version: String) throws {
-        let versionPlistURL = PodoSojuManager.shared.podoSojuRoot.deletingLastPathComponent()
-            .appending(path: "PodoSojuVersion.plist")
+        let versionPlistURL = SojuManager.shared.sojuRoot.deletingLastPathComponent()
+            .appending(path: "SojuVersion.plist")
 
         // 버전 문자열 파싱
         let components = version.split(separator: ".")
@@ -331,7 +331,7 @@ public final class PodoSojuDownloadManager: ObservableObject {
         let patch = Int(components[safe: 2]?.split(separator: "-").first ?? "0") ?? 0
         let preRelease = version.contains("-") ? String(version.split(separator: "-").last ?? "") : nil
 
-        let versionInfo = PodoSojuVersion(
+        let versionInfo = SojuVersion(
             major: major,
             minor: minor,
             patch: patch,
