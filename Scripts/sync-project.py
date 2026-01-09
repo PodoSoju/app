@@ -118,9 +118,9 @@ def generate_pbxproj(files: list[dict]) -> str:
             )
 
     ref_lines.append(
-        f'\t\t{FIXED["soju_app"]} /* Soju.app */ = {{isa = PBXFileReference; '
+        f'\t\t{FIXED["soju_app"]} /* PodoSoju.app */ = {{isa = PBXFileReference; '
         f'explicitFileType = wrapper.application; includeInIndex = 0; '
-        f'path = Soju.app; sourceTree = BUILT_PRODUCTS_DIR; }};'
+        f'path = PodoSoju.app; sourceTree = BUILT_PRODUCTS_DIR; }};'
     )
     ref_lines.append(
         f'\t\t{FIXED["sojukit_ref"]} /* SojuKit */ = {{isa = PBXFileReference; '
@@ -146,7 +146,7 @@ def generate_pbxproj(files: list[dict]) -> str:
     group_lines.append(f'''\t\t{FIXED["products_group"]} /* Products */ = {{
 \t\t\tisa = PBXGroup;
 \t\t\tchildren = (
-\t\t\t\t{FIXED["soju_app"]} /* Soju.app */,
+\t\t\t\t{FIXED["soju_app"]} /* PodoSoju.app */,
 \t\t\t);
 \t\t\tname = Products;
 \t\t\tsourceTree = "<group>";
@@ -249,12 +249,12 @@ def generate_pbxproj(files: list[dict]) -> str:
 \t\t\t);
 \t\t\tdependencies = (
 \t\t\t);
-\t\t\tname = Soju;
+\t\t\tname = PodoSoju;
 \t\t\tpackageProductDependencies = (
 \t\t\t\t{FIXED["sojukit_dep"]} /* SojuKit */,
 \t\t\t);
-\t\t\tproductName = Soju;
-\t\t\tproductReference = {FIXED["soju_app"]} /* Soju.app */;
+\t\t\tproductName = PodoSoju;
+\t\t\tproductReference = {FIXED["soju_app"]} /* PodoSoju.app */;
 \t\t\tproductType = "com.apple.product-type.application";
 \t\t}};
 /* End PBXNativeTarget section */
@@ -438,7 +438,7 @@ def generate_pbxproj(files: list[dict]) -> str:
 \t\t\tbuildSettings = {{
 \t\t\t\tASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 \t\t\t\tASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-\t\t\t\tCODE_SIGN_ENTITLEMENTS = Soju/Soju.entitlements;
+\t\t\t\tCODE_SIGN_ENTITLEMENTS = PodoSoju/PodoSoju.entitlements;
 \t\t\t\tCODE_SIGN_STYLE = Automatic;
 \t\t\t\tCOMBINE_HIDPI_IMAGES = YES;
 \t\t\t\tCURRENT_PROJECT_VERSION = 1;
@@ -446,7 +446,7 @@ def generate_pbxproj(files: list[dict]) -> str:
 \t\t\t\tENABLE_HARDENED_RUNTIME = YES;
 \t\t\t\tENABLE_PREVIEWS = YES;
 \t\t\t\tGENERATE_INFOPLIST_FILE = NO;
-\t\t\t\tINFOPLIST_FILE = Soju/Info.plist;
+\t\t\t\tINFOPLIST_FILE = PodoSoju/Info.plist;
 \t\t\t\tINFOPLIST_KEY_CFBundleDisplayName = Soju;
 \t\t\t\tINFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 \t\t\t\tINFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -467,7 +467,7 @@ def generate_pbxproj(files: list[dict]) -> str:
 \t\t\tbuildSettings = {{
 \t\t\t\tASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 \t\t\t\tASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-\t\t\t\tCODE_SIGN_ENTITLEMENTS = Soju/Soju.entitlements;
+\t\t\t\tCODE_SIGN_ENTITLEMENTS = PodoSoju/PodoSoju.entitlements;
 \t\t\t\tCODE_SIGN_STYLE = Automatic;
 \t\t\t\tCOMBINE_HIDPI_IMAGES = YES;
 \t\t\t\tCURRENT_PROJECT_VERSION = 1;
@@ -475,7 +475,7 @@ def generate_pbxproj(files: list[dict]) -> str:
 \t\t\t\tENABLE_HARDENED_RUNTIME = YES;
 \t\t\t\tENABLE_PREVIEWS = YES;
 \t\t\t\tGENERATE_INFOPLIST_FILE = NO;
-\t\t\t\tINFOPLIST_FILE = Soju/Info.plist;
+\t\t\t\tINFOPLIST_FILE = PodoSoju/Info.plist;
 \t\t\t\tINFOPLIST_KEY_CFBundleDisplayName = Soju;
 \t\t\t\tINFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 \t\t\t\tINFOPLIST_KEY_NSHumanReadableCopyright = "";

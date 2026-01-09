@@ -7,37 +7,37 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		8E0C59544BAE3422762D7919 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2580CDC49F6E97EBBBB3C8B9 /* AboutView.swift */; };
-		0216A91A9E9A9189A1260CC4 /* AddProgramView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABC4016C8F50AEF393DCF892 /* AddProgramView.swift */; };
-		7C66E379F3246F8832E232FD /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD4CBE19E30A7ADD6F39E4DA /* ContentView.swift */; };
-		F6DC07E536ECDB4EFE247E55 /* DesktopIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6E89130B49AB3EEDD2A41A7 /* DesktopIcon.swift */; };
-		709AB1987E05A207E637AB84 /* GraphicsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC06465DB51A85D1F5164041 /* GraphicsSettingsView.swift */; };
-		DF45ACBBC27652137A82B666 /* InstallationProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E8782C274A8F1DF8A1D24F8 /* InstallationProgressView.swift */; };
-		B68CADC8289C0F2DBDCD2702 /* LogSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE176E551A24CA95DA90A179 /* LogSettingsView.swift */; };
-		BFFE1E708757614C30C37EFF /* ProgramSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE95776181EB6F4168CAE0B1 /* ProgramSelectionView.swift */; };
-		7079936F11EC50E43634143C /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B592815EA3B7CC6C4F899A9A /* SettingsView.swift */; };
-		1656C1AA916917F3BAA587B3 /* ShortcutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71F496BC6AF2B04028156B1E /* ShortcutView.swift */; };
-		11E3936FACD96AC62F4A8BAA /* ShortcutsGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C099543588BEC91B4FA91A0F /* ShortcutsGridView.swift */; };
-		EE6F0CE45BF660B39FC34BBF /* SojuApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 211261179A90BC8BEF79686B /* SojuApp.swift */; };
-		FED32742B68BC34D9F6A76C5 /* WorkspaceCreationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B28AD352019B00A52D2BB570 /* WorkspaceCreationView.swift */; };
+		2EAC3C083DAF22A3E1BE162D /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C50F89E3EE32BD75606C6C8 /* AboutView.swift */; };
+		EBD93AE29BD92E2B5380ADD0 /* AddProgramView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CDBD84E393435351F4D20A4 /* AddProgramView.swift */; };
+		AC4CB7A89DB246605AC7CA5F /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C83AD637ECE2A3D4EA4E87E3 /* ContentView.swift */; };
+		C0BABE779DD7003A0DDB922E /* DesktopIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6C69B1BFA09347CF2149063 /* DesktopIcon.swift */; };
+		592C61268C058914B148FD87 /* GraphicsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CC150328B7EFBC099981C74 /* GraphicsSettingsView.swift */; };
+		FAD57B6AA375791657C927CA /* InstallationProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85AD201463E12AFF642721B9 /* InstallationProgressView.swift */; };
+		F611CD404254D9FCFD8D8734 /* LogSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25EEC84A0A97C2007FB7945B /* LogSettingsView.swift */; };
+		BA4F911AB88D7ACA83FBACCB /* PodoSojuApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2160B4D3A93A2922921DEB55 /* PodoSojuApp.swift */; };
+		6623E6EAEC83ED7ACC164095 /* ProgramSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 971A66AB30ADA6DB3E644DEF /* ProgramSelectionView.swift */; };
+		D70D2C3048B91C1AE6B465FB /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A5957A02596EF19E339C16D /* SettingsView.swift */; };
+		CADC5418CE7BADA460DFF854 /* ShortcutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6572663D7438CFFD21662352 /* ShortcutView.swift */; };
+		0CAEEAFF957AE6FAB4009B65 /* ShortcutsGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F8D253DE5D39D588755C846 /* ShortcutsGridView.swift */; };
+		B7270A7A2D3517B9063BA97B /* WorkspaceCreationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFCE5646F437B39D37FBC422 /* WorkspaceCreationView.swift */; };
 		A10000007A000001 /* SojuKit in Frameworks */ = {isa = PBXBuildFile; productRef = A10000008A000001 /* SojuKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		2580CDC49F6E97EBBBB3C8B9 /* AboutView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AboutView.swift; path = Soju/Views/AboutView.swift; sourceTree = SOURCE_ROOT; };
-		ABC4016C8F50AEF393DCF892 /* AddProgramView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AddProgramView.swift; path = Soju/Views/Creation/AddProgramView.swift; sourceTree = SOURCE_ROOT; };
-		AD4CBE19E30A7ADD6F39E4DA /* ContentView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Soju/ContentView.swift; sourceTree = SOURCE_ROOT; };
-		F6E89130B49AB3EEDD2A41A7 /* DesktopIcon.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DesktopIcon.swift; path = Soju/Models/DesktopIcon.swift; sourceTree = SOURCE_ROOT; };
-		AC06465DB51A85D1F5164041 /* GraphicsSettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = GraphicsSettingsView.swift; path = Soju/Views/Settings/GraphicsSettingsView.swift; sourceTree = SOURCE_ROOT; };
-		0E8782C274A8F1DF8A1D24F8 /* InstallationProgressView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = InstallationProgressView.swift; path = Soju/Views/Installation/InstallationProgressView.swift; sourceTree = SOURCE_ROOT; };
-		AE176E551A24CA95DA90A179 /* LogSettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LogSettingsView.swift; path = Soju/Views/Settings/LogSettingsView.swift; sourceTree = SOURCE_ROOT; };
-		EE95776181EB6F4168CAE0B1 /* ProgramSelectionView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ProgramSelectionView.swift; path = Soju/Views/Installation/ProgramSelectionView.swift; sourceTree = SOURCE_ROOT; };
-		B592815EA3B7CC6C4F899A9A /* SettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SettingsView.swift; path = Soju/Views/Settings/SettingsView.swift; sourceTree = SOURCE_ROOT; };
-		71F496BC6AF2B04028156B1E /* ShortcutView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ShortcutView.swift; path = Soju/Views/Workspace/ShortcutView.swift; sourceTree = SOURCE_ROOT; };
-		C099543588BEC91B4FA91A0F /* ShortcutsGridView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ShortcutsGridView.swift; path = Soju/Views/Workspace/ShortcutsGridView.swift; sourceTree = SOURCE_ROOT; };
-		211261179A90BC8BEF79686B /* SojuApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Soju/SojuApp.swift; sourceTree = SOURCE_ROOT; };
-		B28AD352019B00A52D2BB570 /* WorkspaceCreationView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WorkspaceCreationView.swift; path = Soju/Views/Creation/WorkspaceCreationView.swift; sourceTree = SOURCE_ROOT; };
-		A10000009A000001 /* Soju.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Soju.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5C50F89E3EE32BD75606C6C8 /* AboutView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AboutView.swift; path = PodoSoju/Views/AboutView.swift; sourceTree = SOURCE_ROOT; };
+		2CDBD84E393435351F4D20A4 /* AddProgramView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AddProgramView.swift; path = PodoSoju/Views/Creation/AddProgramView.swift; sourceTree = SOURCE_ROOT; };
+		C83AD637ECE2A3D4EA4E87E3 /* ContentView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PodoSoju/ContentView.swift; sourceTree = SOURCE_ROOT; };
+		C6C69B1BFA09347CF2149063 /* DesktopIcon.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DesktopIcon.swift; path = PodoSoju/Models/DesktopIcon.swift; sourceTree = SOURCE_ROOT; };
+		7CC150328B7EFBC099981C74 /* GraphicsSettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = GraphicsSettingsView.swift; path = PodoSoju/Views/Settings/GraphicsSettingsView.swift; sourceTree = SOURCE_ROOT; };
+		85AD201463E12AFF642721B9 /* InstallationProgressView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = InstallationProgressView.swift; path = PodoSoju/Views/Installation/InstallationProgressView.swift; sourceTree = SOURCE_ROOT; };
+		25EEC84A0A97C2007FB7945B /* LogSettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LogSettingsView.swift; path = PodoSoju/Views/Settings/LogSettingsView.swift; sourceTree = SOURCE_ROOT; };
+		2160B4D3A93A2922921DEB55 /* PodoSojuApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PodoSoju/PodoSojuApp.swift; sourceTree = SOURCE_ROOT; };
+		971A66AB30ADA6DB3E644DEF /* ProgramSelectionView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ProgramSelectionView.swift; path = PodoSoju/Views/Installation/ProgramSelectionView.swift; sourceTree = SOURCE_ROOT; };
+		3A5957A02596EF19E339C16D /* SettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SettingsView.swift; path = PodoSoju/Views/Settings/SettingsView.swift; sourceTree = SOURCE_ROOT; };
+		6572663D7438CFFD21662352 /* ShortcutView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ShortcutView.swift; path = PodoSoju/Views/Workspace/ShortcutView.swift; sourceTree = SOURCE_ROOT; };
+		3F8D253DE5D39D588755C846 /* ShortcutsGridView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ShortcutsGridView.swift; path = PodoSoju/Views/Workspace/ShortcutsGridView.swift; sourceTree = SOURCE_ROOT; };
+		AFCE5646F437B39D37FBC422 /* WorkspaceCreationView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WorkspaceCreationView.swift; path = PodoSoju/Views/Creation/WorkspaceCreationView.swift; sourceTree = SOURCE_ROOT; };
+		A10000009A000001 /* PodoSoju.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PodoSoju.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1000000CA000001 /* SojuKit */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = SojuKit; path = SojuKit; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -65,26 +65,26 @@
 		A10000010A000001 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				A10000009A000001 /* Soju.app */,
+				A10000009A000001 /* PodoSoju.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		A1000000FA000001 /* Soju */ = {
+		A1000000FA000001 /* PodoSoju */ = {
 			isa = PBXGroup;
 			children = (
 				A1C86A29E589D48EC70B6A32 /* Models */,
 				38DF21AEF4612506D6BE5CBE /* Views */,
-				AD4CBE19E30A7ADD6F39E4DA /* ContentView.swift */,
-				211261179A90BC8BEF79686B /* SojuApp.swift */,
+				C83AD637ECE2A3D4EA4E87E3 /* ContentView.swift */,
+				2160B4D3A93A2922921DEB55 /* PodoSojuApp.swift */,
 			);
-			path = Soju;
+			path = PodoSoju;
 			sourceTree = "<group>";
 		};
 		A1C86A29E589D48EC70B6A32 /* Models */ = {
 			isa = PBXGroup;
 			children = (
-				F6E89130B49AB3EEDD2A41A7 /* DesktopIcon.swift */,
+				C6C69B1BFA09347CF2149063 /* DesktopIcon.swift */,
 			);
 			name = Models;
 			sourceTree = "<group>";
@@ -96,7 +96,7 @@
 				2BAA3D442E2F8E3F1B673DDB /* Installation */,
 				0D7626413CCF860C82715CA5 /* Settings */,
 				8189E9FCEEFCC18B7B136A04 /* Workspace */,
-				2580CDC49F6E97EBBBB3C8B9 /* AboutView.swift */,
+				5C50F89E3EE32BD75606C6C8 /* AboutView.swift */,
 			);
 			name = Views;
 			sourceTree = "<group>";
@@ -104,8 +104,8 @@
 		425FB10C860A8D126A355DC7 /* Creation */ = {
 			isa = PBXGroup;
 			children = (
-				ABC4016C8F50AEF393DCF892 /* AddProgramView.swift */,
-				B28AD352019B00A52D2BB570 /* WorkspaceCreationView.swift */,
+				2CDBD84E393435351F4D20A4 /* AddProgramView.swift */,
+				AFCE5646F437B39D37FBC422 /* WorkspaceCreationView.swift */,
 			);
 			name = Creation;
 			sourceTree = "<group>";
@@ -113,8 +113,8 @@
 		2BAA3D442E2F8E3F1B673DDB /* Installation */ = {
 			isa = PBXGroup;
 			children = (
-				0E8782C274A8F1DF8A1D24F8 /* InstallationProgressView.swift */,
-				EE95776181EB6F4168CAE0B1 /* ProgramSelectionView.swift */,
+				85AD201463E12AFF642721B9 /* InstallationProgressView.swift */,
+				971A66AB30ADA6DB3E644DEF /* ProgramSelectionView.swift */,
 			);
 			name = Installation;
 			sourceTree = "<group>";
@@ -122,9 +122,9 @@
 		0D7626413CCF860C82715CA5 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
-				AC06465DB51A85D1F5164041 /* GraphicsSettingsView.swift */,
-				AE176E551A24CA95DA90A179 /* LogSettingsView.swift */,
-				B592815EA3B7CC6C4F899A9A /* SettingsView.swift */,
+				7CC150328B7EFBC099981C74 /* GraphicsSettingsView.swift */,
+				25EEC84A0A97C2007FB7945B /* LogSettingsView.swift */,
+				3A5957A02596EF19E339C16D /* SettingsView.swift */,
 			);
 			name = Settings;
 			sourceTree = "<group>";
@@ -132,8 +132,8 @@
 		8189E9FCEEFCC18B7B136A04 /* Workspace */ = {
 			isa = PBXGroup;
 			children = (
-				71F496BC6AF2B04028156B1E /* ShortcutView.swift */,
-				C099543588BEC91B4FA91A0F /* ShortcutsGridView.swift */,
+				6572663D7438CFFD21662352 /* ShortcutView.swift */,
+				3F8D253DE5D39D588755C846 /* ShortcutsGridView.swift */,
 			);
 			name = Workspace;
 			sourceTree = "<group>";
@@ -141,9 +141,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		A10000011A000001 /* Soju */ = {
+		A10000011A000001 /* PodoSoju */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = A10000012A000001 /* Build configuration list for PBXNativeTarget "Soju" */;
+			buildConfigurationList = A10000012A000001 /* Build configuration list for PBXNativeTarget "PodoSoju" */;
 			buildPhases = (
 				A10000013A000001 /* Sources */,
 				A1000000DA000001 /* Frameworks */,
@@ -153,12 +153,12 @@
 			);
 			dependencies = (
 			);
-			name = Soju;
+			name = PodoSoju;
 			packageProductDependencies = (
 				A10000008A000001 /* SojuKit */,
 			);
-			productName = Soju;
-			productReference = A10000009A000001 /* Soju.app */;
+			productName = PodoSoju;
+			productReference = A10000009A000001 /* PodoSoju.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -176,7 +176,7 @@
 					};
 				};
 			};
-			buildConfigurationList = A10000016A000001 /* Build configuration list for PBXProject "Soju" */;
+			buildConfigurationList = A10000016A000001 /* Build configuration list for PBXProject "PodoSoju" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -210,19 +210,19 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				8E0C59544BAE3422762D7919 /* AboutView.swift in Sources */,
-				0216A91A9E9A9189A1260CC4 /* AddProgramView.swift in Sources */,
-				7C66E379F3246F8832E232FD /* ContentView.swift in Sources */,
-				F6DC07E536ECDB4EFE247E55 /* DesktopIcon.swift in Sources */,
-				709AB1987E05A207E637AB84 /* GraphicsSettingsView.swift in Sources */,
-				DF45ACBBC27652137A82B666 /* InstallationProgressView.swift in Sources */,
-				B68CADC8289C0F2DBDCD2702 /* LogSettingsView.swift in Sources */,
-				BFFE1E708757614C30C37EFF /* ProgramSelectionView.swift in Sources */,
-				7079936F11EC50E43634143C /* SettingsView.swift in Sources */,
-				1656C1AA916917F3BAA587B3 /* ShortcutView.swift in Sources */,
-				11E3936FACD96AC62F4A8BAA /* ShortcutsGridView.swift in Sources */,
-				EE6F0CE45BF660B39FC34BBF /* SojuApp.swift in Sources */,
-				FED32742B68BC34D9F6A76C5 /* WorkspaceCreationView.swift in Sources */,
+				2EAC3C083DAF22A3E1BE162D /* AboutView.swift in Sources */,
+				EBD93AE29BD92E2B5380ADD0 /* AddProgramView.swift in Sources */,
+				AC4CB7A89DB246605AC7CA5F /* ContentView.swift in Sources */,
+				C0BABE779DD7003A0DDB922E /* DesktopIcon.swift in Sources */,
+				592C61268C058914B148FD87 /* GraphicsSettingsView.swift in Sources */,
+				FAD57B6AA375791657C927CA /* InstallationProgressView.swift in Sources */,
+				F611CD404254D9FCFD8D8734 /* LogSettingsView.swift in Sources */,
+				BA4F911AB88D7ACA83FBACCB /* PodoSojuApp.swift in Sources */,
+				6623E6EAEC83ED7ACC164095 /* ProgramSelectionView.swift in Sources */,
+				D70D2C3048B91C1AE6B465FB /* SettingsView.swift in Sources */,
+				CADC5418CE7BADA460DFF854 /* ShortcutView.swift in Sources */,
+				0CAEEAFF957AE6FAB4009B65 /* ShortcutsGridView.swift in Sources */,
+				B7270A7A2D3517B9063BA97B /* WorkspaceCreationView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -354,7 +354,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = Soju/Soju.entitlements;
+				CODE_SIGN_ENTITLEMENTS = PodoSoju/PodoSoju.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -362,8 +362,8 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = Soju/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = PodoSoju;
+				INFOPLIST_FILE = PodoSoju/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Soju;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -371,7 +371,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.podosoju.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.soju.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
@@ -383,7 +383,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = Soju/Soju.entitlements;
+				CODE_SIGN_ENTITLEMENTS = PodoSoju/PodoSoju.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -391,8 +391,8 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = Soju/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = PodoSoju;
+				INFOPLIST_FILE = PodoSoju/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Soju;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -400,7 +400,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.podosoju.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.soju.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
@@ -410,7 +410,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		A10000012A000001 /* Build configuration list for PBXNativeTarget "Soju" */ = {
+		A10000012A000001 /* Build configuration list for PBXNativeTarget "PodoSoju" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A10000019A000001 /* Debug */,
@@ -419,7 +419,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		A10000016A000001 /* Build configuration list for PBXProject "Soju" */ = {
+		A10000016A000001 /* Build configuration list for PBXProject "PodoSoju" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A10000017A000001 /* Debug */,

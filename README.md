@@ -1,63 +1,55 @@
-# Soju
+# PodoSoju
 
-A powerful macOS application for running Windows games on Apple Silicon.
+A Wine-based Windows application launcher for macOS.
 
 ## Overview
 
-Soju is a next-generation Wine wrapper for macOS, designed specifically for Apple Silicon processors. Built with Swift and modern macOS technologies, Soju provides an elegant and native experience for running Windows applications and games on Mac.
+PodoSoju is a native macOS application that enables running Windows applications and games on Apple Silicon Macs. Built with Swift and SwiftUI, it provides a modern and intuitive interface for managing Windows applications.
 
 ## Features
 
-- **Native Apple Silicon Support**: Optimized for M-series chips with excellent performance
-- **Modern macOS Interface**: Built with SwiftUI for a native Mac experience
-- **Game Library Management**: Organize and launch your Windows games with ease
-- **Wine Version Management**: Easily switch between different Wine versions
-- **User-Friendly Configuration**: Intuitive settings without complex terminal commands
+- **Workspace Management**: Organize Windows applications in isolated workspaces
+- **Native macOS Experience**: Built with SwiftUI for seamless Mac integration
+- **Apple Silicon Optimized**: Designed specifically for M-series processors
+- **Powered by Soju**: Uses the Soju Wine distribution for Windows compatibility
 
 ## Architecture
 
-- **Soju**: Main application UI and user experience
-- **SojuKit**: Core Wine integration and management library
-- **Scripts**: Build and deployment automation
-- **Tests**: Comprehensive test suite
+- **PodoSoju**: Main application (macOS app)
+- **SojuKit**: Core framework for Wine integration
+- **Soju**: Wine distribution (downloaded separately)
 
 ## Requirements
 
 - macOS 14.0 (Sonoma) or later
-- Apple Silicon (M1, M2, M3, M4, or later)
-- Xcode 16.0 or later
+- Apple Silicon (M1/M2/M3/M4)
+
+## Installation
+
+Download from [Releases](https://github.com/PodoSoju/app/releases)
 
 ## Development
 
-This project is built using:
-- Swift 6.0
-- SwiftUI
-- Xcode 16.0+
+### Building
 
-### Building the Project
-
-1. Open `Soju.xcodeproj` in Xcode
-2. Select the Soju scheme
-3. Build and run (⌘R)
-
-### Running Tests
-
-SojuKit tests:
 ```bash
-cd SojuKit
-swift test
+# Sync Xcode project
+python3 Scripts/sync-project.py
+
+# Build
+xcodebuild -scheme PodoSoju -configuration Debug build
 ```
 
-Or run tests from Xcode (⌘U)
+Or open `PodoSoju.xcodeproj` in Xcode and build (Cmd+R).
+
+### Project Structure
+
+```
+PodoSoju/           # macOS app source
+SojuKit/            # Core framework
+Scripts/            # Build automation
+```
 
 ## License
 
-TBD
-
-## Credits
-
-Inspired by and built upon the work of the Wine project and previous Wine wrappers for macOS.
-
----
-
-**Note**: Soju is in active development. Features and documentation are subject to change.
+MIT
