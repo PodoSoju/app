@@ -155,7 +155,7 @@ public final class Workspace: ObservableObject, Equatable, Hashable, Identifiabl
     public func focusRunningProgram(_ url: URL) -> Bool {
         // 프로그램 이름 추출 (확장자 제외, 소문자)
         let programName = url.deletingPathExtension().lastPathComponent.lowercased()
-        Logger.sojuKit.logWithFile("🔍 focusRunningProgram: \(programName)", level: .info)
+        Logger.sojuKit.info("🔍 focusRunningProgram: \(programName)", category: "Workspace")
 
         // Wine 프로세스 찾기
         let wineApps = NSWorkspace.shared.runningApplications.filter {
@@ -184,14 +184,14 @@ public final class Workspace: ObservableObject, Equatable, Hashable, Identifiabl
                     AXUIElementPerformAction(window, kAXRaiseAction as CFString)
                     AXUIElementSetAttributeValue(axApp, kAXFrontmostAttribute as CFString, true as CFTypeRef)
                     app.activate()
-                    Logger.sojuKit.logWithFile("✅ Focused matching window: \(title)", level: .info)
+                    Logger.sojuKit.info("✅ Focused matching window: \(title)", category: "Workspace")
                     return true
                 }
             }
         }
 
         // 매칭되는 창 못 찾음 - 계속 대기 (fallback 없음)
-        Logger.sojuKit.logWithFile("⏳ No matching window yet for: \(programName)", level: .info)
+        Logger.sojuKit.info("⏳ No matching window yet for: \(programName)", category: "Workspace")
         return false
     }
 
@@ -285,7 +285,7 @@ public class Program: Identifiable, Hashable, ObservableObject, @unchecked Senda
         // Check if this program is already running - focus instead of launching new instance
         if workspace.isProgramRunning(self.url) {
             Logger.sojuKit.info("⚠️ Program already running, attempting to focus", category: category)
-            _ = await workspace.focusRunningProgram(self.url)
+            _ = workspace.focusRunningProgram(self.url)
             return
         }
 

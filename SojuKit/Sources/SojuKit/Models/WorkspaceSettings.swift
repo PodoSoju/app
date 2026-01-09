@@ -51,6 +51,7 @@ public struct WorkspaceWineConfig: Codable, Equatable {
 // MARK: - Graphics Configuration
 
 public struct WorkspaceGraphicsConfig: Codable, Equatable {
+    var graphicsBackend: GraphicsBackend = .dxmt
     var metalHud: Bool = false
     var metalTrace: Bool = false
     var dxrEnabled: Bool = false
@@ -62,6 +63,7 @@ public struct WorkspaceGraphicsConfig: Codable, Equatable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.graphicsBackend = try container.decodeIfPresent(GraphicsBackend.self, forKey: .graphicsBackend) ?? .dxmt
         self.metalHud = try container.decodeIfPresent(Bool.self, forKey: .metalHud) ?? false
         self.metalTrace = try container.decodeIfPresent(Bool.self, forKey: .metalTrace) ?? false
         self.dxrEnabled = try container.decodeIfPresent(Bool.self, forKey: .dxrEnabled) ?? false
@@ -167,6 +169,11 @@ public struct WorkspaceSettings: Codable, Equatable {
         set { graphicsConfig.dxrEnabled = newValue }
     }
 
+    public var graphicsBackend: GraphicsBackend {
+        get { return graphicsConfig.graphicsBackend }
+        set { graphicsConfig.graphicsBackend = newValue }
+    }
+
     // MARK: - Encoding/Decoding
 
     /// Decode settings from metadata URL
@@ -204,8 +211,40 @@ public struct WorkspaceSettings: Codable, Equatable {
 
     /// Configure Wine environment variables based on settings
     public func environmentVariables(wineEnv: inout [String: String]) {
-        // DXVK configuration
-        if graphicsConfig.dxvk {
+        // Graphics backend configuration
+        switch graphicsConfig.graphicsBackend {
+        case .dxmt:
+            // DXMT is the default, no special configuration needed
+            break
+
+        case .dxvk:
+            // DXVK - redirect DirectX DLLs to DXVK
+            wineEnv.updateValue("dxgi,d3d9,d3d10core,d3d11=n,b", forKey: "WINEDLLOVERRIDES")
+
+            // DXVK HUD configuration
+            switch graphicsConfig.dxvkHud {
+            case .full:
+                wineEnv.updateValue("full", forKey: "DXVK_HUD")
+            case .partial:
+                wineEnv.updateValue("devinfo,fps,frametimes", forKey: "DXVK_HUD")
+            case .fps:
+                wineEnv.updateValue("fps", forKey: "DXVK_HUD")
+            case .off:
+                break
+            }
+
+            if graphicsConfig.dxvkAsync {
+                wineEnv.updateValue("1", forKey: "DXVK_ASYNC")
+            }
+
+        case .d3dmetal:
+            // D3DMetal - Apple Game Porting Toolkit
+            // Uses D3DMetal.framework from GPTK
+            wineEnv.updateValue("1", forKey: "D3DM_SUPPORT_DXR")
+        }
+
+        // Legacy DXVK flag support (for backwards compatibility)
+        if graphicsConfig.dxvk && graphicsConfig.graphicsBackend != .dxvk {
             wineEnv.updateValue("dxgi,d3d9,d3d10core,d3d11=n,b", forKey: "WINEDLLOVERRIDES")
             switch graphicsConfig.dxvkHud {
             case .full:
@@ -219,7 +258,7 @@ public struct WorkspaceSettings: Codable, Equatable {
             }
         }
 
-        if graphicsConfig.dxvkAsync {
+        if graphicsConfig.dxvkAsync && graphicsConfig.graphicsBackend != .dxvk {
             wineEnv.updateValue("1", forKey: "DXVK_ASYNC")
         }
 
@@ -248,8 +287,8 @@ public struct WorkspaceSettings: Codable, Equatable {
             wineEnv.updateValue("1", forKey: "ROSETTA_ADVERTISE_AVX")
         }
 
-        // DXR configuration
-        if graphicsConfig.dxrEnabled {
+        // DXR configuration (also enabled by D3DMetal backend)
+        if graphicsConfig.dxrEnabled && graphicsConfig.graphicsBackend != .d3dmetal {
             wineEnv.updateValue("1", forKey: "D3DM_SUPPORT_DXR")
         }
     }

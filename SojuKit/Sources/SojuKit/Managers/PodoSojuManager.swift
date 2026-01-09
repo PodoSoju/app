@@ -361,6 +361,80 @@ public final class PodoSojuManager: @unchecked Sendable {
         Logger.sojuKit.info("Workspace initialized at \(workspace.winePrefixPath)")
     }
 
+    // MARK: - GPTK Detection and D3DMetal Installation
+
+    /// GPTK (Game Porting Toolkit) 설치 여부 확인
+    public func isGPTKInstalled() -> Bool {
+        return FileManager.default.fileExists(atPath: "/Applications/Game Porting Toolkit.app")
+    }
+
+    /// GPTK 설치 상태 확인
+    public func checkGPTKStatus() -> GPTKInstallationStatus {
+        let gptkAppPath = "/Applications/Game Porting Toolkit.app"
+        let d3dmetalPath = "/Applications/Game Porting Toolkit.app/Contents/Resources/wine/lib/external/D3DMetal.framework"
+
+        if !FileManager.default.fileExists(atPath: gptkAppPath) {
+            return .notInstalled
+        }
+
+        if FileManager.default.fileExists(atPath: d3dmetalPath) {
+            // Try to get version from Info.plist
+            let infoPlistPath = "\(gptkAppPath)/Contents/Info.plist"
+            if let plistData = FileManager.default.contents(atPath: infoPlistPath),
+               let plist = try? PropertyListSerialization.propertyList(from: plistData, options: [], format: nil) as? [String: Any],
+               let version = plist["CFBundleShortVersionString"] as? String {
+                return .installed(version: version)
+            }
+            return .installed(version: nil)
+        }
+
+        return .partiallyInstalled
+    }
+
+    /// GPTK에서 D3DMetal 프레임워크를 PodoSoju lib으로 복사
+    /// - Returns: 복사된 D3DMetal 경로
+    @discardableResult
+    public func installD3DMetalFromGPTK() throws -> URL {
+        let gptkD3DMetalPath = URL(fileURLWithPath: "/Applications/Game Porting Toolkit.app/Contents/Resources/wine/lib/external/D3DMetal.framework")
+        let destPath = libFolder.appending(path: "external").appending(path: "D3DMetal.framework")
+
+        guard FileManager.default.fileExists(atPath: gptkD3DMetalPath.path) else {
+            throw D3DMetalError.gptkNotInstalled
+        }
+
+        // external 디렉토리 생성
+        let externalDir = libFolder.appending(path: "external")
+        if !FileManager.default.fileExists(atPath: externalDir.path) {
+            try FileManager.default.createDirectory(at: externalDir, withIntermediateDirectories: true)
+        }
+
+        // 기존 D3DMetal 제거
+        if FileManager.default.fileExists(atPath: destPath.path) {
+            try FileManager.default.removeItem(at: destPath)
+        }
+
+        // 복사
+        try FileManager.default.copyItem(at: gptkD3DMetalPath, to: destPath)
+
+        Logger.sojuKit.info("D3DMetal.framework installed from GPTK", category: "PodoSoju")
+        return destPath
+    }
+
+    /// D3DMetal 설치 여부 확인
+    public var isD3DMetalInstalled: Bool {
+        let d3dmetalPath = libFolder.appending(path: "external").appending(path: "D3DMetal.framework")
+        return FileManager.default.fileExists(atPath: d3dmetalPath.path)
+    }
+
+    /// D3DMetal 삭제
+    public func uninstallD3DMetal() throws {
+        let d3dmetalPath = libFolder.appending(path: "external").appending(path: "D3DMetal.framework")
+        if FileManager.default.fileExists(atPath: d3dmetalPath.path) {
+            try FileManager.default.removeItem(at: d3dmetalPath)
+            Logger.sojuKit.info("D3DMetal.framework removed", category: "PodoSoju")
+        }
+    }
+
     // MARK: - CJK Font Installation
 
     /// Install CJK (Korean/Japanese/Chinese) fonts to Wine prefix
@@ -523,16 +597,16 @@ public final class PodoSojuManager: @unchecked Sendable {
     /// 모든 Wine 관련 프로세스 종료
     /// 앱 종료 시 호출하여 orphan 프로세스 방지
     public func killAllWineProcesses() {
-        Logger.sojuKit.logWithFile("🧹 killAllWineProcesses() called", level: .info)
+        Logger.sojuKit.info("🧹 killAllWineProcesses() called", category: "PodoSoju")
 
         // 1. Windows 프로세스 강제 종료 (C:\ 경로로 실행된 프로세스)
-        Logger.sojuKit.logWithFile("Killing Windows processes...", level: .debug)
+        Logger.sojuKit.debug("Killing Windows processes...", category: "PodoSoju")
         forceKillProcess(pattern: "C:\\\\Program")
         forceKillProcess(pattern: "C:\\\\windows")
         forceKillProcess(pattern: "C:\\\\users")
 
         // 2. Wine 관련 프로세스 강제 종료
-        Logger.sojuKit.logWithFile("Killing Wine processes...", level: .debug)
+        Logger.sojuKit.debug("Killing Wine processes...", category: "PodoSoju")
         forceKillProcess(pattern: "wineserver")
         forceKillProcess(pattern: "wine64")
         forceKillProcess(pattern: "winedevice")
@@ -542,7 +616,7 @@ public final class PodoSojuManager: @unchecked Sendable {
         forceKillProcess(pattern: "rpcss.exe")
         forceKillProcess(pattern: "explorer.exe")
 
-        Logger.sojuKit.logWithFile("✅ killAllWineProcesses() completed", level: .info)
+        Logger.sojuKit.info("✅ killAllWineProcesses() completed", category: "PodoSoju")
     }
 
     /// 프로세스 강제 종료 (SIGKILL)
@@ -557,9 +631,9 @@ public final class PodoSojuManager: @unchecked Sendable {
             try process.run()
             process.waitUntilExit()
             let status = process.terminationStatus
-            Logger.sojuKit.logWithFile("pkill -9 -f '\(pattern)' → exit \(status)", level: .debug)
+            Logger.sojuKit.debug("pkill -9 -f '\(pattern)' → exit \(status)", category: "PodoSoju")
         } catch {
-            Logger.sojuKit.logWithFile("pkill failed for '\(pattern)': \(error)", level: .error)
+            Logger.sojuKit.error("pkill failed for '\(pattern)': \(error)", category: "PodoSoju")
         }
     }
 
@@ -628,6 +702,25 @@ public enum PodoSojuError: LocalizedError {
             return "wineboot failed with exit code \(code)"
         case .pathConversionFailed(let path):
             return "Failed to convert path to Windows format: \(path)"
+        }
+    }
+}
+
+// MARK: - D3DMetal Errors
+
+public enum D3DMetalError: LocalizedError {
+    case gptkNotInstalled
+    case d3dmetalNotFound
+    case installationFailed(String)
+
+    public var errorDescription: String? {
+        switch self {
+        case .gptkNotInstalled:
+            return "Game Porting Toolkit is not installed. Please install GPTK from Apple Developer website."
+        case .d3dmetalNotFound:
+            return "D3DMetal.framework not found in GPTK installation."
+        case .installationFailed(let reason):
+            return "D3DMetal installation failed: \(reason)"
         }
     }
 }

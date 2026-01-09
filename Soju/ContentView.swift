@@ -11,14 +11,20 @@ import os.log
 
 struct ContentView: View {
     @StateObject private var workspaceManager = WorkspaceManager.shared
+    @StateObject private var downloadManager = PodoSojuDownloadManager.shared
     @State private var selectedWorkspace: Workspace?
     @State private var isCreatingWorkspace = false
     @State private var errorMessage: String?
     @State private var showCreateWorkspace = false
+    @State private var showPodoSojuSetup = false
+    @State private var hasCheckedPodoSoju = false
 
     var body: some View {
         Group {
-            if workspaceManager.workspaces.isEmpty {
+            if showPodoSojuSetup {
+                // PodoSoju not installed - show setup view
+                podoSojuSetupView
+            } else if workspaceManager.workspaces.isEmpty {
                 // No workspaces available
                 emptyStateView
             } else if workspaceManager.workspaces.count == 1 {
@@ -38,6 +44,127 @@ struct ContentView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear {
+            checkPodoSojuInstallation()
+        }
+    }
+
+    // MARK: - PodoSoju Installation Check
+
+    private func checkPodoSojuInstallation() {
+        guard !hasCheckedPodoSoju else { return }
+        hasCheckedPodoSoju = true
+
+        if !PodoSojuManager.shared.isInstalled {
+            Logger.sojuKit.info("PodoSoju not installed, showing setup view")
+            showPodoSojuSetup = true
+        }
+    }
+
+    // MARK: - PodoSoju Setup View
+
+    private var podoSojuSetupView: some View {
+        VStack(spacing: 24) {
+            Image(systemName: "arrow.down.circle")
+                .imageScale(.large)
+                .font(.system(size: 64))
+                .foregroundStyle(.blue)
+
+            Text("PodoSoju Required")
+                .font(.largeTitle)
+
+            Text("Soju requires PodoSoju (Wine) to run Windows applications.\nPlease download and install it to continue.")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 400)
+
+            if let error = errorMessage {
+                Text(error)
+                    .font(.caption)
+                    .foregroundColor(.red)
+                    .padding(.horizontal)
+            }
+
+            // Download progress
+            if downloadManager.state.isInProgress {
+                VStack(spacing: 8) {
+                    switch downloadManager.state {
+                    case .checking:
+                        HStack {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                            Text("Checking for latest version...")
+                        }
+                    case .downloading(let progress):
+                        VStack(spacing: 4) {
+                            ProgressView(value: progress)
+                                .frame(width: 300)
+                            Text("Downloading... \(Int(progress * 100))%")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    case .extracting:
+                        HStack {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                            Text("Extracting...")
+                        }
+                    case .installing:
+                        HStack {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                            Text("Installing...")
+                        }
+                    default:
+                        EmptyView()
+                    }
+
+                    Button("Cancel") {
+                        downloadManager.cancelDownload()
+                    }
+                    .buttonStyle(.bordered)
+                }
+            } else {
+                Button("Download PodoSoju") {
+                    downloadPodoSoju()
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+            }
+
+            if case .completed = downloadManager.state {
+                HStack {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                    Text("Installation complete!")
+                }
+                .onAppear {
+                    // Wait a moment then proceed
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        withAnimation {
+                            showPodoSojuSetup = false
+                        }
+                    }
+                }
+            }
+        }
+        .padding()
+    }
+
+    private func downloadPodoSoju() {
+        errorMessage = nil
+
+        Task {
+            do {
+                _ = try await downloadManager.checkForUpdate()
+                try await downloadManager.downloadLatest()
+            } catch {
+                await MainActor.run {
+                    errorMessage = error.localizedDescription
+                }
+            }
+        }
     }
 
     // MARK: - Empty State
@@ -90,7 +217,7 @@ struct ContentView: View {
                     ) {
                         ForEach(workspaceManager.workspaces) { workspace in
                             WorkspaceCard(workspace: workspace) {
-                                Logger.sojuKit.logWithFile("📂 Workspace selected: \(workspace.settings.name)", level: .info)
+                                Logger.sojuKit.info("📂 Workspace selected: \(workspace.settings.name)")
 
                                 // Sync with WorkspaceManager for Wine environment setup
                                 workspaceManager.selectWorkspace(workspace)
@@ -98,7 +225,7 @@ struct ContentView: View {
                                 withAnimation {
                                     selectedWorkspace = workspace
                                 }
-                                Logger.sojuKit.logWithFile("✅ Entered workspace: \(workspace.settings.name)", level: .debug)
+                                Logger.sojuKit.debug("✅ Entered workspace: \(workspace.settings.name)")
                             }
                             .frame(minWidth: 200, maxWidth: 300)
                         }
@@ -192,10 +319,10 @@ struct WorkspaceCard: View {
         )
         .contentShape(Rectangle())
         .onTapGesture(count: 2) {
-            Logger.sojuKit.logWithFile("🖱️ Workspace double-clicked: \(workspace.settings.name)", level: .info)
-            Logger.sojuKit.logWithFile("📂 Entering workspace...", level: .debug)
+            Logger.sojuKit.info("🖱️ Workspace double-clicked: \(workspace.settings.name)")
+            Logger.sojuKit.debug("📂 Entering workspace...")
             onSelect()
-            Logger.sojuKit.logWithFile("✅ onSelect() called", level: .debug)
+            Logger.sojuKit.debug("✅ onSelect() called")
         }
     }
 }

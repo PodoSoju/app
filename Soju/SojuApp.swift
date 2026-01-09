@@ -15,8 +15,8 @@ struct SojuApp: App {
 
     init() {
         // Log app launch to file
-        Logger.sojuKit.logWithFile("🍶 Soju app launched", level: .info)
-        Logger.sojuKit.logWithFile("📋 Log file location: \(Logger.logFileURL.path)", level: .info)
+        Logger.sojuKit.info("🍶 Soju app launched")
+        Logger.sojuKit.info("📋 Log file location: \(Logger.logFileURL.path)")
     }
 
     var body: some Scene {
@@ -24,7 +24,7 @@ struct SojuApp: App {
             ContentView()
                 .frame(minWidth: 800, minHeight: 600)
                 .onAppear {
-                    Logger.sojuKit.logWithFile("🪟 Main window appeared", level: .info)
+                    Logger.sojuKit.info("🪟 Main window appeared")
                 }
         }
         .windowStyle(.hiddenTitleBar)
@@ -83,13 +83,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             let response = alert.runModal()
             if response == .alertFirstButtonReturn {
                 // 종료 선택 → Wine 종료 후 창 닫기 허용
-                Logger.sojuKit.logWithFile("User confirmed Wine process termination (window close)", level: .info)
+                Logger.sojuKit.info("User confirmed Wine process termination (window close)")
                 PodoSojuManager.shared.killAllWineProcesses()
                 shouldTerminate = true
                 return true  // 창 닫기 허용
             } else {
                 // 취소 → 창 닫기 거부
-                Logger.sojuKit.logWithFile("User cancelled window close", level: .info)
+                Logger.sojuKit.info("User cancelled window close")
                 return false  // 창 닫기 거부
             }
         }
@@ -117,11 +117,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
             let response = alert.runModal()
             if response == .alertFirstButtonReturn {
-                Logger.sojuKit.logWithFile("User confirmed Wine process termination", level: .info)
+                Logger.sojuKit.info("User confirmed Wine process termination")
                 PodoSojuManager.shared.killAllWineProcesses()
                 return .terminateNow
             } else {
-                Logger.sojuKit.logWithFile("User cancelled app termination", level: .info)
+                Logger.sojuKit.info("User cancelled app termination")
                 return .terminateCancel
             }
         }
@@ -130,7 +130,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        Logger.sojuKit.logWithFile("👋 Soju app terminated", level: .info)
+        Logger.sojuKit.info("👋 Soju app terminated")
     }
 
     /// Wine 프로세스 개수 확인
@@ -153,7 +153,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 return lines.count
             }
         } catch {
-            Logger.sojuKit.logWithFile("Failed to count Wine processes: \(error)", level: .error)
+            Logger.sojuKit.error("Failed to count Wine processes: \(error)")
         }
 
         return 0

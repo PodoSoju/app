@@ -51,7 +51,7 @@ struct ShortcutView: View {
         .contextMenu {
             Button("Rename", systemImage: "pencil.line") {
                 // TODO: Implement rename functionality
-                Logger.sojuKit.logWithFile("Rename requested for: \(shortcut.name)", level: .debug)
+                Logger.sojuKit.debug("Rename requested for: \(shortcut.name)")
             }
             Button(role: .destructive) {
                 showDeleteConfirmation = true
@@ -107,12 +107,12 @@ struct ShortcutView: View {
 
             // pgrep으로 실제 실행 중인지 확인
             if PodoSojuManager.shared.isProcessRunning(exeName: exeName) {
-                Logger.sojuKit.logWithFile("Program already running (pgrep): \(exeName)", level: .info)
+                Logger.sojuKit.info("Program already running (pgrep): \(exeName)")
 
                 // 이미 실행 중 -> 포커스만
                 await MainActor.run {
                     if workspace.focusRunningProgram(shortcut.url) {
-                        Logger.sojuKit.logWithFile("Successfully focused: \(shortcut.name)", level: .info)
+                        Logger.sojuKit.info("Successfully focused: \(shortcut.name)")
                     }
                 }
                 return
@@ -146,33 +146,33 @@ struct ShortcutView: View {
 
         Task {
             do {
-                Logger.sojuKit.logWithFile("Running program: \(shortcut.name)", level: .info)
+                Logger.sojuKit.info("Running program: \(shortcut.name)")
                 try await program.run(in: workspace)
-                Logger.sojuKit.logWithFile("Program started: \(shortcut.name)", level: .info)
+                Logger.sojuKit.info("Program started: \(shortcut.name)")
 
                 // Wine 창이 뜰 때까지 대기 후 포커스 (최대 15초, 1초 간격)
-                Logger.sojuKit.logWithFile("⏳ Starting focus loop...", level: .info)
+                Logger.sojuKit.info("⏳ Starting focus loop...")
                 for attempt in 1...15 {
                     try await Task.sleep(nanoseconds: 1_000_000_000)
-                    Logger.sojuKit.logWithFile("⏳ Attempt \(attempt)/15", level: .info)
+                    Logger.sojuKit.info("⏳ Attempt \(attempt)/15")
                     let focused = await MainActor.run {
                         workspace.focusRunningProgram(shortcut.url)
                     }
-                    Logger.sojuKit.logWithFile("⏳ Focus result: \(focused)", level: .info)
+                    Logger.sojuKit.info("⏳ Focus result: \(focused)")
                     if focused {
-                        Logger.sojuKit.logWithFile("✅ Auto-focused after \(attempt)s", level: .info)
+                        Logger.sojuKit.info("✅ Auto-focused after \(attempt)s")
                         await MainActor.run { isLoading = false }
                         return  // 성공하면 바로 종료
                     }
                 }
                 // 타임아웃 - 창 못 찾음
-                Logger.sojuKit.logWithFile("❌ Timeout waiting for window", level: .info)
+                Logger.sojuKit.info("❌ Timeout waiting for window")
             } catch {
                 await MainActor.run {
                     errorMessage = error.localizedDescription
                     showError = true
                 }
-                Logger.sojuKit.logWithFile("Failed to run program \(shortcut.name): \(error.localizedDescription)", level: .error)
+                Logger.sojuKit.error("Failed to run program \(shortcut.name): \(error.localizedDescription)")
             }
 
             await MainActor.run { isLoading = false }
@@ -188,7 +188,7 @@ struct ShortcutView: View {
             try? FileManager.default.removeItem(at: shortcut.url)
         }
 
-        Logger.sojuKit.logWithFile("Deleted shortcut: \(shortcut.name)", level: .info)
+        Logger.sojuKit.info("Deleted shortcut: \(shortcut.name)")
     }
 }
 
