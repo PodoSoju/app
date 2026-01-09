@@ -26,7 +26,7 @@ struct SettingsView: View {
 
 /// Soju (Wine) 관련 설정
 struct SojuSettingsView: View {
-    @ObservedObject private var downloadManager = PodoSojuDownloadManager.shared
+    @ObservedObject private var downloadManager = SojuDownloadManager.shared
 
     var body: some View {
         Form {
@@ -34,10 +34,10 @@ struct SojuSettingsView: View {
                 HStack {
                     Text("Installed Version:")
                     Spacer()
-                    if let version = PodoSojuManager.shared.version {
+                    if let version = SojuManager.shared.version {
                         Text(version.versionString)
                             .foregroundStyle(.secondary)
-                    } else if PodoSojuManager.shared.isInstalled {
+                    } else if SojuManager.shared.isInstalled {
                         Text("Unknown")
                             .foregroundStyle(.secondary)
                     } else {
@@ -76,10 +76,10 @@ struct SojuSettingsView: View {
                 HStack {
                     Text("Status:")
                     Spacer()
-                    if PodoSojuManager.shared.isD3DMetalInstalled {
+                    if SojuManager.shared.isD3DMetalInstalled {
                         Text("Installed")
                             .foregroundStyle(.green)
-                    } else if PodoSojuManager.shared.isGPTKInstalled() {
+                    } else if SojuManager.shared.isGPTKInstalled() {
                         Text("GPTK available")
                             .foregroundStyle(.orange)
                     } else {
@@ -88,9 +88,9 @@ struct SojuSettingsView: View {
                     }
                 }
 
-                if !PodoSojuManager.shared.isD3DMetalInstalled && PodoSojuManager.shared.isGPTKInstalled() {
+                if !SojuManager.shared.isD3DMetalInstalled && SojuManager.shared.isGPTKInstalled() {
                     Button("Install D3DMetal from GPTK") {
-                        try? PodoSojuManager.shared.installD3DMetalFromGPTK()
+                        try? SojuManager.shared.installD3DMetalFromGPTK()
                     }
                 }
 

@@ -10,7 +10,7 @@ import SojuKit
 import os.log
 
 struct GraphicsSettingsView: View {
-    @StateObject private var downloadManager = PodoSojuDownloadManager.shared
+    @StateObject private var downloadManager = SojuDownloadManager.shared
     @State private var gptkStatus: GPTKInstallationStatus = .notInstalled
     @State private var isCheckingUpdate: Bool = false
     @State private var updateAvailable: GitHubRelease?
@@ -42,7 +42,7 @@ struct GraphicsSettingsView: View {
         .formStyle(.grouped)
         .frame(minWidth: 500, minHeight: 400)
         .onAppear {
-            gptkStatus = PodoSojuManager.shared.checkGPTKStatus()
+            gptkStatus = SojuManager.shared.checkGPTKStatus()
         }
         .alert("Error", isPresented: $showError) {
             Button("OK") { }
@@ -271,14 +271,14 @@ struct GraphicsSettingsView: View {
                     installD3DMetal()
                 }
                 .buttonStyle(.bordered)
-                .disabled(PodoSojuManager.shared.isD3DMetalInstalled)
+                .disabled(SojuManager.shared.isD3DMetalInstalled)
             } else {
                 Link("Get GPTK", destination: URL(string: "https://developer.apple.com/games/game-porting-toolkit/")!)
                     .buttonStyle(.bordered)
             }
         }
 
-        if PodoSojuManager.shared.isD3DMetalInstalled {
+        if SojuManager.shared.isD3DMetalInstalled {
             HStack {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundColor(.green)
@@ -363,9 +363,9 @@ struct GraphicsSettingsView: View {
 
     private func installD3DMetal() {
         do {
-            try PodoSojuManager.shared.installD3DMetalFromGPTK()
+            try SojuManager.shared.installD3DMetalFromGPTK()
             // Force view refresh
-            gptkStatus = PodoSojuManager.shared.checkGPTKStatus()
+            gptkStatus = SojuManager.shared.checkGPTKStatus()
         } catch {
             errorMessage = error.localizedDescription
             showError = true
@@ -374,9 +374,9 @@ struct GraphicsSettingsView: View {
 
     private func removeD3DMetal() {
         do {
-            try PodoSojuManager.shared.uninstallD3DMetal()
+            try SojuManager.shared.uninstallD3DMetal()
             // Force view refresh
-            gptkStatus = PodoSojuManager.shared.checkGPTKStatus()
+            gptkStatus = SojuManager.shared.checkGPTKStatus()
         } catch {
             errorMessage = error.localizedDescription
             showError = true

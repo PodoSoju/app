@@ -1,6 +1,6 @@
 //
-//  SojuApp.swift
-//  Soju
+//  PodoSojuApp.swift
+//  PodoSoju
 //
 //  Created on 2026-01-07.
 //
@@ -10,7 +10,7 @@ import SojuKit
 import os.log
 
 @main
-struct SojuApp: App {
+struct PodoSojuApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @State private var showAbout = false
     @State private var showSettings = false
@@ -70,7 +70,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
         // SIGTERM 핸들러 - kill -15로 종료 시 Wine도 정리
         signal(SIGTERM) { _ in
-            PodoSojuManager.shared.killAllWineProcesses()
+            SojuManager.shared.killAllWineProcesses()
             exit(0)
         }
     }
@@ -99,7 +99,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             if response == .alertFirstButtonReturn {
                 // 종료 선택 → Wine 종료 후 창 닫기 허용
                 Logger.sojuKit.info("User confirmed Wine process termination (window close)")
-                PodoSojuManager.shared.killAllWineProcesses()
+                SojuManager.shared.killAllWineProcesses()
                 shouldTerminate = true
                 return true  // 창 닫기 허용
             } else {
@@ -133,7 +133,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             let response = alert.runModal()
             if response == .alertFirstButtonReturn {
                 Logger.sojuKit.info("User confirmed Wine process termination")
-                PodoSojuManager.shared.killAllWineProcesses()
+                SojuManager.shared.killAllWineProcesses()
                 return .terminateNow
             } else {
                 Logger.sojuKit.info("User cancelled app termination")

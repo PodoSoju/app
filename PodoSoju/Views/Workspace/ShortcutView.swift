@@ -106,7 +106,7 @@ struct ShortcutView: View {
             }
 
             // pgrep으로 실제 실행 중인지 확인
-            if PodoSojuManager.shared.isProcessRunning(exeName: exeName) {
+            if SojuManager.shared.isProcessRunning(exeName: exeName) {
                 Logger.sojuKit.info("Program already running (pgrep): \(exeName)")
 
                 // 이미 실행 중 -> 포커스만

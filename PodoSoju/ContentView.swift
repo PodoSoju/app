@@ -11,7 +11,7 @@ import os.log
 
 struct ContentView: View {
     @StateObject private var workspaceManager = WorkspaceManager.shared
-    @StateObject private var downloadManager = PodoSojuDownloadManager.shared
+    @StateObject private var downloadManager = SojuDownloadManager.shared
     @State private var selectedWorkspace: Workspace?
     @State private var isCreatingWorkspace = false
     @State private var errorMessage: String?
@@ -55,7 +55,7 @@ struct ContentView: View {
         guard !hasCheckedPodoSoju else { return }
         hasCheckedPodoSoju = true
 
-        if !PodoSojuManager.shared.isInstalled {
+        if !SojuManager.shared.isInstalled {
             Logger.sojuKit.info("PodoSoju not installed, showing setup view")
             showPodoSojuSetup = true
         }
