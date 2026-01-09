@@ -1,12 +1,12 @@
 //
 //  ContentView.swift
-//  Soju
+//  PodoSoju
 //
 //  Created on 2026-01-07.
 //
 
 import SwiftUI
-import SojuKit
+import PodoSojuKit
 import os.log
 
 struct ContentView: View {
@@ -70,10 +70,10 @@ struct ContentView: View {
                 .font(.system(size: 64))
                 .foregroundStyle(.blue)
 
-            Text("PodoSoju Required")
+            Text("Soju Required")
                 .font(.largeTitle)
 
-            Text("Soju requires PodoSoju (Wine) to run Windows applications.\nPlease download and install it to continue.")
+            Text("PodoSoju requires Soju (Wine distribution) to run Windows applications.\nPlease download and install it to continue.")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -126,8 +126,8 @@ struct ContentView: View {
                     .buttonStyle(.bordered)
                 }
             } else {
-                Button("Download PodoSoju") {
-                    downloadPodoSoju()
+                Button("Download Soju") {
+                    downloadSoju()
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
@@ -152,7 +152,7 @@ struct ContentView: View {
         .padding()
     }
 
-    private func downloadPodoSoju() {
+    private func downloadSoju() {
         errorMessage = nil
 
         Task {

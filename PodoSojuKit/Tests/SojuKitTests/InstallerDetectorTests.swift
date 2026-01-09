@@ -6,7 +6,7 @@
 //
 
 import XCTest
-@testable import SojuKit
+@testable import PodoSojuKit
 
 final class InstallerDetectorTests: XCTestCase {
 

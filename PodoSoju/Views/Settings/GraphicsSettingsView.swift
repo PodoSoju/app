@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-import SojuKit
+import PodoSojuKit
 import os.log
 
 struct GraphicsSettingsView: View {
@@ -20,9 +20,9 @@ struct GraphicsSettingsView: View {
 
     var body: some View {
         Form {
-            // PodoSoju Section
-            Section("PodoSoju (Wine)") {
-                podoSojuStatusView
+            // Soju Section
+            Section("Soju (Wine)") {
+                sojuStatusView
 
                 if showDownloadProgress {
                     downloadProgressView
@@ -51,10 +51,10 @@ struct GraphicsSettingsView: View {
         }
     }
 
-    // MARK: - PodoSoju Status View
+    // MARK: - Soju Status View
 
     @ViewBuilder
-    private var podoSojuStatusView: some View {
+    private var sojuStatusView: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Installation Status")
@@ -99,12 +99,12 @@ struct GraphicsSettingsView: View {
 
                     if !downloadManager.isInstalled {
                         Button("Install") {
-                            installPodoSoju()
+                            installSoju()
                         }
                         .buttonStyle(.borderedProminent)
                     } else if updateAvailable != nil {
                         Button("Update") {
-                            installPodoSoju()
+                            installSoju()
                         }
                         .buttonStyle(.borderedProminent)
                     }
@@ -282,7 +282,7 @@ struct GraphicsSettingsView: View {
             HStack {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundColor(.green)
-                Text("D3DMetal.framework is installed in PodoSoju")
+                Text("D3DMetal.framework is installed in Soju")
                     .font(.caption)
                     .foregroundColor(.secondary)
 
@@ -333,7 +333,7 @@ struct GraphicsSettingsView: View {
         }
     }
 
-    private func installPodoSoju() {
+    private func installSoju() {
         showDownloadProgress = true
 
         Task {

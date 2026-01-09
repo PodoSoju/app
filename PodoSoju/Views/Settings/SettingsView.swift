@@ -1,5 +1,5 @@
 import SwiftUI
-import SojuKit
+import PodoSojuKit
 
 struct SettingsView: View {
     var body: some View {

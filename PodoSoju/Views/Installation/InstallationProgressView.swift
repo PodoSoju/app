@@ -1,12 +1,12 @@
 //
 //  InstallationProgressView.swift
-//  Soju
+//  PodoSoju
 //
 //  Created on 2026-01-08.
 //
 
 import SwiftUI
-import SojuKit
+import PodoSojuKit
 
 /// View that shows installation progress and discovered programs
 ///

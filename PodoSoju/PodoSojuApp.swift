@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-import SojuKit
+import PodoSojuKit
 import os.log
 
 @main

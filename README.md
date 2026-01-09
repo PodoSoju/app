@@ -16,7 +16,7 @@ PodoSoju is a native macOS application that enables running Windows applications
 ## Architecture
 
 - **PodoSoju**: Main application (macOS app)
-- **SojuKit**: Core framework for Wine integration
+- **PodoSojuKit**: Core framework providing Wine integration and workspace management
 - **Soju**: Wine distribution (downloaded separately)
 
 ## Requirements
@@ -46,9 +46,14 @@ Or open `PodoSoju.xcodeproj` in Xcode and build (Cmd+R).
 
 ```
 PodoSoju/           # macOS app source
-SojuKit/            # Core framework
+PodoSojuKit/        # Core framework
 Scripts/            # Build automation
 ```
+
+## References
+
+- [Soju](https://github.com/PodoSoju/soju) - Wine distribution for PodoSoju
+- [Whisky](https://github.com/Whisky-App/Whisky) - Wine wrapper for macOS
 
 ## License
 

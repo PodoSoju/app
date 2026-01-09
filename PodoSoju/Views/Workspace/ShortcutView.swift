@@ -1,12 +1,12 @@
 //
 //  ShortcutView.swift
-//  Soju
+//  PodoSoju
 //
 //  Created on 2026-01-08.
 //
 
 import SwiftUI
-import SojuKit
+import PodoSojuKit
 import os.log
 
 /// Individual shortcut card with double-tap to run

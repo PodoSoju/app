@@ -1,12 +1,12 @@
 //
 //  ProgramSelectionView.swift
-//  Soju
+//  PodoSoju
 //
 //  Created on 2026-01-08.
 //
 
 import SwiftUI
-import SojuKit
+import PodoSojuKit
 
 /// View for selecting discovered programs to add to workspace after installation
 struct ProgramSelectionView: View {

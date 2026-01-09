@@ -21,7 +21,7 @@ import Foundation
 ///
 /// # Usage
 /// ```swift
-/// import SojuKit
+/// import PodoSojuKit
 ///
 /// let manager = WorkspaceManager.shared
 /// manager.loadWorkspaces()

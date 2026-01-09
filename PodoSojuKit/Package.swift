@@ -4,27 +4,30 @@
 import PackageDescription
 
 let package = Package(
-    name: "SojuKit",
+    name: "PodoSojuKit",
     platforms: [
         .macOS(.v14)
     ],
     products: [
         .library(
+            name: "PodoSojuKit",
+            targets: ["PodoSojuKit"]),
+        .library(
             name: "SojuKit",
-            targets: ["SojuKit"]),
+            targets: ["PodoSojuKit"]),
     ],
     dependencies: [
         .package(url: "https://github.com/SwiftPackageIndex/SemanticVersion.git", from: "0.3.0")
     ],
     targets: [
         .target(
-            name: "SojuKit",
+            name: "PodoSojuKit",
             dependencies: ["SemanticVersion"],
             path: "Sources/SojuKit"
         ),
         .testTarget(
-            name: "SojuKitTests",
-            dependencies: ["SojuKit"],
+            name: "PodoSojuKitTests",
+            dependencies: ["PodoSojuKit"],
             path: "Tests/SojuKitTests"
         ),
     ]
