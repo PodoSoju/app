@@ -16,8 +16,8 @@ from pathlib import Path
 from collections import defaultdict
 
 PROJECT_ROOT = Path(__file__).parent.parent
-PROJECT_FILE = PROJECT_ROOT / "Soju.xcodeproj" / "project.pbxproj"
-SOJU_DIR = PROJECT_ROOT / "Soju"
+PROJECT_FILE = PROJECT_ROOT / "PodoSoju.xcodeproj" / "project.pbxproj"
+SOJU_DIR = PROJECT_ROOT / "PodoSoju"
 
 # Fixed UUIDs matching original project - NEVER CHANGE THESE
 FIXED = {
@@ -48,12 +48,12 @@ def uuid_for(prefix: str, path: str) -> str:
 
 
 def scan_swift_files() -> list[dict]:
-    """Scan Soju/ directory for Swift files"""
+    """Scan PodoSoju/ directory for Swift files"""
     files = []
     for f in sorted(SOJU_DIR.rglob("*.swift")):
         rel = f.relative_to(PROJECT_ROOT)
-        # Group path: Soju/Views/Settings/X.swift -> Views/Settings
-        parts = rel.parts[1:-1]  # Skip "Soju" and filename
+        # Group path: PodoSoju/Views/Settings/X.swift -> Views/Settings
+        parts = rel.parts[1:-1]  # Skip "PodoSoju" and filename
         group = "/".join(parts) if parts else ""
 
         files.append({
@@ -158,8 +158,8 @@ def generate_pbxproj(files: list[dict]) -> str:
 
         if gpath == "":
             gid = FIXED["soju_group"]
-            gname = "Soju"
-            path_attr = "path = Soju;"
+            gname = "PodoSoju"
+            path_attr = "path = PodoSoju;"
         else:
             gid = uuid_for("group", gpath)
             gname = gpath.split("/")[-1]
@@ -237,9 +237,9 @@ def generate_pbxproj(files: list[dict]) -> str:
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-\t\t{FIXED["target"]} /* Soju */ = {{
+\t\t{FIXED["target"]} /* PodoSoju */ = {{
 \t\t\tisa = PBXNativeTarget;
-\t\t\tbuildConfigurationList = {FIXED["target_config_list"]} /* Build configuration list for PBXNativeTarget "Soju" */;
+\t\t\tbuildConfigurationList = {FIXED["target_config_list"]} /* Build configuration list for PBXNativeTarget "PodoSoju" */;
 \t\t\tbuildPhases = (
 \t\t\t\t{FIXED["sources_phase"]} /* Sources */,
 \t\t\t\t{FIXED["frameworks_phase"]} /* Frameworks */,
@@ -272,7 +272,7 @@ def generate_pbxproj(files: list[dict]) -> str:
 \t\t\t\t\t}};
 \t\t\t\t}};
 \t\t\t}};
-\t\t\tbuildConfigurationList = {FIXED["project_config_list"]} /* Build configuration list for PBXProject "Soju" */;
+\t\t\tbuildConfigurationList = {FIXED["project_config_list"]} /* Build configuration list for PBXProject "PodoSoju" */;
 \t\t\tdevelopmentRegion = en;
 \t\t\thasScannedForEncodings = 0;
 \t\t\tknownRegions = (
@@ -494,7 +494,7 @@ def generate_pbxproj(files: list[dict]) -> str:
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-\t\t{FIXED["target_config_list"]} /* Build configuration list for PBXNativeTarget "Soju" */ = {{
+\t\t{FIXED["target_config_list"]} /* Build configuration list for PBXNativeTarget "PodoSoju" */ = {{
 \t\t\tisa = XCConfigurationList;
 \t\t\tbuildConfigurations = (
 \t\t\t\t{FIXED["debug_target"]} /* Debug */,
@@ -503,7 +503,7 @@ def generate_pbxproj(files: list[dict]) -> str:
 \t\t\tdefaultConfigurationIsVisible = 0;
 \t\t\tdefaultConfigurationName = Release;
 \t\t}};
-\t\t{FIXED["project_config_list"]} /* Build configuration list for PBXProject "Soju" */ = {{
+\t\t{FIXED["project_config_list"]} /* Build configuration list for PBXProject "PodoSoju" */ = {{
 \t\t\tisa = XCConfigurationList;
 \t\t\tbuildConfigurations = (
 \t\t\t\t{FIXED["debug_project"]} /* Debug */,
@@ -543,7 +543,7 @@ def main():
     # 3. Build test
     print("\n🔨 빌드 테스트...")
     result = subprocess.run(
-        ["xcodebuild", "-scheme", "Soju", "-configuration", "Debug",
+        ["xcodebuild", "-scheme", "PodoSoju", "-configuration", "Debug",
          "-derivedDataPath", "build", "-quiet", "build"],
         cwd=PROJECT_ROOT,
         capture_output=True,
