@@ -69,7 +69,7 @@ public class WorkspaceManager: ObservableObject {
 
         // Install fonts
         do {
-            try PodoSojuManager.shared.installCJKFonts(workspace: workspace)
+            try SojuManager.shared.installCJKFonts(workspace: workspace)
             Logger.sojuKit.info("CJK fonts installed for existing workspace: \(workspace.settings.name)", category: "WorkspaceManager")
         } catch {
             Logger.sojuKit.warning("Failed to install CJK fonts for workspace \(workspace.settings.name): \(error.localizedDescription)", category: "WorkspaceManager")
@@ -111,7 +111,7 @@ public class WorkspaceManager: ObservableObject {
         let tempWorkspace = Workspace(workspaceUrl: workspaceURL, isAvailable: true)
         do {
             let winebootStart = Date()
-            try await PodoSojuManager.shared.runWineboot(workspace: tempWorkspace)
+            try await SojuManager.shared.runWineboot(workspace: tempWorkspace)
             let winebootDuration = Date().timeIntervalSince(winebootStart)
 
             // Verify Wine prefix structure
@@ -131,7 +131,7 @@ public class WorkspaceManager: ObservableObject {
             // Install CJK fonts for Korean/Japanese/Chinese support
             Logger.sojuKit.info("🔤 [3.5/6] Installing CJK fonts...", category: "WorkspaceManager")
             do {
-                try PodoSojuManager.shared.installCJKFonts(workspace: tempWorkspace)
+                try SojuManager.shared.installCJKFonts(workspace: tempWorkspace)
                 Logger.sojuKit.info("    ✅ CJK fonts installed", category: "WorkspaceManager")
             } catch {
                 // Font installation failure is non-fatal - log warning but continue

@@ -316,8 +316,8 @@ public class Program: Identifiable, Hashable, ObservableObject, @unchecked Senda
         // Program is @unchecked Sendable (same as Whisky)
         try await Task.detached(priority: .userInitiated) { [workspace] in
             do {
-                let podoSoju = PodoSojuManager.shared
-                Logger.sojuKit.debug("📦 PodoSojuManager acquired", category: category)
+                let sojuManager = SojuManager.shared
+                Logger.sojuKit.debug("📦 SojuManager acquired", category: category)
 
                 // Check if this is an installer - enable verbose Wine debug output
                 let isInstaller = InstallerDetector.isInstaller(self.url)
@@ -355,7 +355,7 @@ public class Program: Identifiable, Hashable, ObservableObject, @unchecked Senda
                 // This prevents blocking on 'wine start /unix' which spawns background processes
                 // Pattern from Whisky (line 110-114)
                 // captureOutput: false prevents pipes from blocking GUI windows
-                for await _ in try podoSoju.runWine(
+                for await _ in try sojuManager.runWine(
                     args: wineArgs,
                     workspace: workspace,
                     additionalEnv: additionalEnv,
