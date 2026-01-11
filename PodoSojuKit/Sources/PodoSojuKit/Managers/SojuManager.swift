@@ -205,11 +205,23 @@ public final class SojuManager: @unchecked Sendable {
         Logger.podoSojuKit.debug("Working directory: \(workspace.url.path(percentEncoded: false))", category: "Soju")
         Logger.podoSojuKit.debug("Capture output: \(captureOutput)", category: "Soju")
 
+        // SOJU 패치용 환경변수 추가
+        var envWithSoju = additionalEnv
+        // exe 경로 추출 (첫 번째 .exe 인자)
+        if let exePath = args.first(where: { $0.lowercased().hasSuffix(".exe") }) {
+            envWithSoju["SOJU_EXE_PATH"] = exePath
+            Logger.podoSojuKit.debug("SOJU_EXE_PATH set to: \(exePath)", category: "Soju")
+        }
+        // 워크스페이스 ID 설정 (URL의 마지막 컴포넌트가 UUID)
+        let workspaceId = workspace.url.lastPathComponent
+        envWithSoju["SOJU_WORKSPACE_ID"] = workspaceId
+        Logger.podoSojuKit.debug("SOJU_WORKSPACE_ID set to: \(workspaceId)", category: "Soju")
+
         let process = Process()
         process.executableURL = wineBinary
         process.arguments = args
         process.currentDirectoryURL = workspace.url
-        process.environment = constructEnvironment(for: workspace, additionalEnv: additionalEnv)
+        process.environment = constructEnvironment(for: workspace, additionalEnv: envWithSoju)
         process.qualityOfService = .userInitiated
 
         if captureOutput {
