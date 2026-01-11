@@ -329,13 +329,13 @@ public final class SojuManager: @unchecked Sendable {
         guard !components.isEmpty else { return }
 
         let process = Process()
-        // Use 'script' command to create a pseudo-terminal (pty)
+        // Use 'script' command via bash to create a pseudo-terminal (pty)
         // This makes wget output progress information as if connected to a terminal
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/script")
+        process.executableURL = URL(fileURLWithPath: "/bin/bash")
         let winetricksCmd = ([winetricksBinary.path, "-q", "--force"] + components)
             .map { $0.contains(" ") ? "'\($0)'" : $0 }
             .joined(separator: " ")
-        process.arguments = ["-q", "/dev/null", "/bin/bash", "-c", winetricksCmd]
+        process.arguments = ["-c", "script -q /dev/null \(winetricksCmd)"]
         process.currentDirectoryURL = workspace.url
 
         // winetricks용 환경변수 설정
@@ -407,11 +407,11 @@ public final class SojuManager: @unchecked Sendable {
         }
 
         let process = Process()
-        // Use 'script' command to create a pseudo-terminal (pty)
+        // Use 'script' command via bash to create a pseudo-terminal (pty)
         // This makes wget output progress information as if connected to a terminal
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/script")
-        let winetricksCmd = "\(winetricksBinary.path) -q --force \(component)"
-        process.arguments = ["-q", "/dev/null", "/bin/bash", "-c", winetricksCmd]
+        process.executableURL = URL(fileURLWithPath: "/bin/bash")
+        let escapedPath = winetricksBinary.path.replacingOccurrences(of: " ", with: "\\ ")
+        process.arguments = ["-c", "script -q /dev/null \(escapedPath) -q --force \(component)"]
         process.currentDirectoryURL = workspace.url
 
         // winetricks용 환경변수 설정
