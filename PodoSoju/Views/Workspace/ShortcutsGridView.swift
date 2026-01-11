@@ -85,10 +85,10 @@ struct ShortcutsGridView: View {
         .onDrop(of: [.fileURL], isTargeted: nil) { providers in
             handleFileDrop(providers)
         }
-        .onReceive(cleanupTimer) { _ in
-            // Periodically clean up stale running program entries
-            workspace.cleanupStaleRunningPrograms()
-        }
+        // FIXME: Disabled due to recursive lock crash - fix hasRunningWineProcesses thread safety
+        // .onReceive(cleanupTimer) { _ in
+        //     workspace.cleanupStaleRunningPrograms()
+        // }
         .onReceive(desktopWatcher.desktopChanged) { _ in
             // Reload shortcuts when desktop contents change
             Logger.podoSojuKit.debug("Desktop changed, reloading shortcuts", category: "UI")
@@ -127,18 +127,20 @@ struct ShortcutsGridView: View {
             let discoveredShortcuts = await scanDesktopFolders()
             Logger.podoSojuKit.debug("Found \(discoveredShortcuts.count) shortcuts from Desktop folders", category: "UI")
 
-            // 2. Convert pinnedPrograms to DesktopIcon (with icon extraction)
+            // 2. Convert pinnedPrograms to DesktopIcon (with icon lookup)
             let pinnedIcons = workspace.settings.pinnedPrograms.compactMap { pinned -> DesktopIcon? in
                 guard let url = pinned.url else {
                     Logger.podoSojuKit.warning("Skipping pinned program '\(pinned.name)' - no URL", category: "UI")
                     return nil
                 }
                 Logger.podoSojuKit.debug("Adding pinned program: \(pinned.name) -> \(url.path)", category: "UI")
+                let iconURL = IconManager.shared.getIconURL(for: url, in: workspace.url)
                 return DesktopIcon(
                     id: pinned.id,
                     name: pinned.name,
                     url: url,
-                    iconImage: iconForProgram(name: pinned.name)
+                    iconImage: iconForProgram(name: pinned.name),
+                    iconURL: iconURL
                 )
             }
             Logger.podoSojuKit.debug("Found \(pinnedIcons.count) pinned programs", category: "UI")
@@ -229,10 +231,12 @@ struct ShortcutsGridView: View {
 
                 seenNames.insert(name.lowercased())
 
+                let iconURL = IconManager.shared.getIconURL(for: lnkURL, in: workspace.url)
                 let icon = DesktopIcon(
                     name: name,
                     url: lnkURL,
-                    iconImage: iconForProgram(name: name)
+                    iconImage: iconForProgram(name: name),
+                    iconURL: iconURL
                 )
                 icons.append(icon)
             }

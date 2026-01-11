@@ -7,19 +7,31 @@
 
 import Foundation
 import SwiftUI
+import AppKit
 
 /// Represents an icon on the desktop (grid-based layout, no free positioning)
 struct DesktopIcon: Identifiable, Hashable, Comparable {
     let id: UUID
     let name: String
     let url: URL
-    let iconImage: String // SF Symbol name
+    let iconImage: String // SF Symbol name (fallback)
+    let iconURL: URL? // Actual icon file (PNG/BMP/ICO)
 
-    init(id: UUID = UUID(), name: String, url: URL, iconImage: String = "app.fill") {
+    init(id: UUID = UUID(), name: String, url: URL, iconImage: String = "app.fill", iconURL: URL? = nil) {
         self.id = id
         self.name = name
         self.url = url
         self.iconImage = iconImage
+        self.iconURL = iconURL
+    }
+
+    /// Returns NSImage from iconURL if available, nil otherwise
+    var actualIcon: NSImage? {
+        guard let iconURL = iconURL,
+              FileManager.default.fileExists(atPath: iconURL.path) else {
+            return nil
+        }
+        return NSImage(contentsOf: iconURL)
     }
 
     // Hashable conformance

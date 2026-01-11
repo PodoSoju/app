@@ -101,14 +101,23 @@ struct ShortcutView: View {
 
     // MARK: - Views
 
-    /// Icon view displaying SF Symbol
+    /// Icon view displaying actual exe icon or SF Symbol fallback
     @ViewBuilder
     private var iconView: some View {
-        Image(systemName: shortcut.iconImage)
-            .resizable()
-            .scaledToFit()
-            .foregroundStyle(.white)
-            .shadow(color: .black.opacity(0.3), radius: 2, x: 1, y: 1)
+        if let nsImage = shortcut.actualIcon {
+            // Actual exe icon from .soju/apps/
+            Image(nsImage: nsImage)
+                .resizable()
+                .scaledToFit()
+                .shadow(color: .black.opacity(0.3), radius: 2, x: 1, y: 1)
+        } else {
+            // SF Symbol fallback
+            Image(systemName: shortcut.iconImage)
+                .resizable()
+                .scaledToFit()
+                .foregroundStyle(.white)
+                .shadow(color: .black.opacity(0.3), radius: 2, x: 1, y: 1)
+        }
     }
 
     // MARK: - Actions
