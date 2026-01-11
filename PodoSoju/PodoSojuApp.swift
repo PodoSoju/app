@@ -102,16 +102,21 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         Logger.podoSojuKit.info("Received URL: \(url.absoluteString)", category: "URLHandler")
 
         // podosoju://run/{workspace-id}/{encoded-exe-path}
-        let pathComponents = url.pathComponents.filter { $0 != "/" }
-
-        guard pathComponents.count >= 2,
-              pathComponents[0] == "run" else {
-            Logger.podoSojuKit.warning("Invalid URL format: \(url.absoluteString)", category: "URLHandler")
+        // URL 구조: scheme://host/path → host가 "run", path가 나머지
+        guard url.host == "run" else {
+            Logger.podoSojuKit.warning("Invalid URL host (expected 'run'): \(url.absoluteString)", category: "URLHandler")
             return
         }
 
-        let workspaceId = pathComponents[1]
-        let encodedPath = pathComponents.dropFirst(2).joined(separator: "/")
+        let pathComponents = url.pathComponents.filter { $0 != "/" }
+
+        guard pathComponents.count >= 1 else {
+            Logger.podoSojuKit.warning("Invalid URL format (missing workspace-id): \(url.absoluteString)", category: "URLHandler")
+            return
+        }
+
+        let workspaceId = pathComponents[0]
+        let encodedPath = pathComponents.dropFirst(1).joined(separator: "/")
 
         guard let exePath = encodedPath.removingPercentEncoding else {
             Logger.podoSojuKit.warning("Failed to decode exe path: \(encodedPath)", category: "URLHandler")
@@ -121,8 +126,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         Logger.podoSojuKit.info("Running: workspace=\(workspaceId), exe=\(exePath)", category: "URLHandler")
 
         // Workspace 찾기 및 실행 (inline)
-        let workspacesDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("com.podosoju.app/Workspaces")
+        // ~/Library/Containers/com.podosoju.app/Workspaces/
+        let workspacesDir = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Containers/com.podosoju.app/Workspaces")
 
         let workspaceURL = workspacesDir.appendingPathComponent(workspaceId)
 
