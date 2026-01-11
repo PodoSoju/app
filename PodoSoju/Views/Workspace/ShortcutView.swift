@@ -216,16 +216,24 @@ struct ShortcutView: View {
     /// 내 프로그램의 창이 열렸는지 확인
     private func checkMyWindowOpened(programURL: URL, launchTime: Date) -> (found: Bool, shouldStop: Bool) {
         let programName = programURL.deletingPathExtension().lastPathComponent.lowercased()
+        let exeName = programURL.lastPathComponent
 
-        // pgrep으로 프로세스 실행 중인지 확인
-        let isRunning = SojuManager.shared.isProcessRunning(exeName: programName + ".exe")
+        // 1. .soju/running/ 파일로 확인 (가장 정확)
+        let runningApps = workspace.getRunningWineApps()
+        if runningApps.contains(where: { $0.exe.lowercased() == exeName.lowercased() }) {
+            Logger.podoSojuKit.debug("Found running app via .soju/running: \(exeName)", category: "ShortcutView")
+            return (true, false)
+        }
 
-        if !isRunning {
+        // 2. pgrep으로 프로세스 실행 중인지 확인
+        let isRunning = SojuManager.shared.isProcessRunning(exeName: exeName)
+
+        if !isRunning && runningApps.isEmpty {
             // 프로세스가 종료됨 (설치 완료 등)
             return (false, true)
         }
 
-        // Wine 창 목록에서 내 프로그램 찾기
+        // 3. Wine 창 목록에서 내 프로그램 찾기 (fallback)
         guard let windowList = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else {
             return (false, false)
         }
@@ -250,8 +258,6 @@ struct ShortcutView: View {
                     Logger.podoSojuKit.debug("Found Wine window with empty title, assuming mine (only 1 pending)", category: "ShortcutView")
                     return (true, false)
                 }
-
-                // Wine 창은 있지만 내 프로그램인지 확실하지 않음 - 계속 탐색
             }
         }
 

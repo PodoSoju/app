@@ -351,6 +351,70 @@ public final class Workspace: ObservableObject, Equatable, Hashable, Identifiabl
         }
     }
 
+    // MARK: - Wine Running Apps Tracking
+
+    /// Wine 실행 중인 앱 정보
+    public struct RunningWineApp: Codable {
+        public let exe: String      // e.g., "NetFile.exe"
+        public let path: String     // e.g., "C:\\Program Files\\NetFile\\NetFile.exe"
+        public let pid: Int
+        public let started: String
+    }
+
+    /// .soju/running/ 디렉토리에서 실행 중인 Wine 앱 목록 조회
+    /// - Returns: 유효한 PID를 가진 실행 중인 앱 목록
+    /// - Note: 유효하지 않은 PID의 파일은 자동으로 삭제됨
+    public func getRunningWineApps() -> [RunningWineApp] {
+        let runningDir = url.appendingPathComponent(".soju/running")
+        let fileManager = FileManager.default
+
+        guard fileManager.fileExists(atPath: runningDir.path) else {
+            return []
+        }
+
+        var runningApps: [RunningWineApp] = []
+
+        do {
+            let files = try fileManager.contentsOfDirectory(at: runningDir, includingPropertiesForKeys: nil)
+            for file in files where file.pathExtension == "json" {
+                do {
+                    let data = try Data(contentsOf: file)
+                    let app = try JSONDecoder().decode(RunningWineApp.self, from: data)
+
+                    // PID 유효성 검증
+                    if isProcessRunning(pid: pid_t(app.pid)) {
+                        runningApps.append(app)
+                    } else {
+                        // PID 유효하지 않음 - 파일 삭제 (강제 종료 등으로 남은 것)
+                        try? fileManager.removeItem(at: file)
+                        Logger.podoSojuKit.info("Cleaned up stale Wine app file: \(file.lastPathComponent) (PID \(app.pid) not running)", category: "Workspace")
+                    }
+                } catch {
+                    // 파싱 실패 시 파일 삭제
+                    try? fileManager.removeItem(at: file)
+                    Logger.podoSojuKit.warning("Removed invalid Wine app file: \(file.lastPathComponent)", category: "Workspace")
+                }
+            }
+        } catch {
+            Logger.podoSojuKit.warning("Failed to read .soju/running directory: \(error.localizedDescription)", category: "Workspace")
+        }
+
+        return runningApps
+    }
+
+    /// PID가 현재 실행 중인지 확인
+    private func isProcessRunning(pid: pid_t) -> Bool {
+        // kill(pid, 0)은 프로세스 존재 여부만 확인 (신호 안 보냄)
+        return kill(pid, 0) == 0
+    }
+
+    /// 특정 exe 이름의 앱이 실행 중인지 확인
+    /// - Parameter exeName: 확인할 exe 이름 (e.g., "NetFile.exe")
+    public func isWineAppRunning(exeName: String) -> Bool {
+        let runningApps = getRunningWineApps()
+        return runningApps.contains { $0.exe.lowercased() == exeName.lowercased() }
+    }
+
     // MARK: - Portable Program Management
 
     /// Error types for portable program operations
