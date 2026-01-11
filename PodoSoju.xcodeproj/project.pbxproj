@@ -7,54 +7,54 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0CAEEAFF957AE6FAB4009B65 /* ShortcutsGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F8D253DE5D39D588755C846 /* ShortcutsGridView.swift */; };
 		2EAC3C083DAF22A3E1BE162D /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C50F89E3EE32BD75606C6C8 /* AboutView.swift */; };
-		EBD93AE29BD92E2B5380ADD0 /* AddProgramView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CDBD84E393435351F4D20A4 /* AddProgramView.swift */; };
-		AC4CB7A89DB246605AC7CA5F /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C83AD637ECE2A3D4EA4E87E3 /* ContentView.swift */; };
-		C0BABE779DD7003A0DDB922E /* DesktopIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6C69B1BFA09347CF2149063 /* DesktopIcon.swift */; };
 		592C61268C058914B148FD87 /* GraphicsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CC150328B7EFBC099981C74 /* GraphicsSettingsView.swift */; };
-		FAD57B6AA375791657C927CA /* InstallationProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85AD201463E12AFF642721B9 /* InstallationProgressView.swift */; };
+		6623E6EAEC83ED7ACC164095 /* ProgramSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 971A66AB30ADA6DB3E644DEF /* ProgramSelectionView.swift */; };
+		83483EE7B8DD4D0726CD8763 /* WinetricksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA16C7BAB4765E4E3C04A6C3 /* WinetricksView.swift */; };
+		A10000007A000001 /* PodoSojuKit in Frameworks */ = {isa = PBXBuildFile; productRef = A10000008A000001 /* PodoSojuKit */; };
+		ABG000012D3517B9063BA97B /* AppBundleGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABG000022D3517B9063BA97B /* AppBundleGenerator.swift */; };
+		AC4CB7A89DB246605AC7CA5F /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C83AD637ECE2A3D4EA4E87E3 /* ContentView.swift */; };
+		B7270A7A2D3517B9063BA97B /* WorkspaceCreationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFCE5646F437B39D37FBC422 /* WorkspaceCreationView.swift */; };
+		BA4F911AB88D7ACA83FBACCB /* PodoSojuApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2160B4D3A93A2922921DEB55 /* PodoSojuApp.swift */; };
+		C0BABE779DD7003A0DDB922E /* DesktopIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6C69B1BFA09347CF2149063 /* DesktopIcon.swift */; };
+		CADC5418CE7BADA460DFF854 /* ShortcutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6572663D7438CFFD21662352 /* ShortcutView.swift */; };
+		D70D2C3048B91C1AE6B465FB /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A5957A02596EF19E339C16D /* SettingsView.swift */; };
+		EBD93AE29BD92E2B5380ADD0 /* AddProgramView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CDBD84E393435351F4D20A4 /* AddProgramView.swift */; };
 		F611CD404254D9FCFD8D8734 /* LogSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25EEC84A0A97C2007FB7945B /* LogSettingsView.swift */; };
+		FAD57B6AA375791657C927CA /* InstallationProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85AD201463E12AFF642721B9 /* InstallationProgressView.swift */; };
 		LMV00001B9063BA97B0001 /* LogModalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = LMV00002B9063BA97B0001 /* LogModalView.swift */; };
 		LWV00001B9063BA97B0001 /* LogWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = LWV00002B9063BA97B0001 /* LogWindowView.swift */; };
-		BA4F911AB88D7ACA83FBACCB /* PodoSojuApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2160B4D3A93A2922921DEB55 /* PodoSojuApp.swift */; };
-		6623E6EAEC83ED7ACC164095 /* ProgramSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 971A66AB30ADA6DB3E644DEF /* ProgramSelectionView.swift */; };
-		D70D2C3048B91C1AE6B465FB /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A5957A02596EF19E339C16D /* SettingsView.swift */; };
-		CADC5418CE7BADA460DFF854 /* ShortcutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6572663D7438CFFD21662352 /* ShortcutView.swift */; };
-		0CAEEAFF957AE6FAB4009B65 /* ShortcutsGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F8D253DE5D39D588755C846 /* ShortcutsGridView.swift */; };
-		B7270A7A2D3517B9063BA97B /* WorkspaceCreationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFCE5646F437B39D37FBC422 /* WorkspaceCreationView.swift */; };
-		WSSV00012D3517B9063BA97B /* WorkspaceSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WSSV00022D3517B9063BA97B /* WorkspaceSettingsView.swift */; };
 		OWS000012D3517B9063BA97B /* OpenWorkspacesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = OWS000022D3517B9063BA97B /* OpenWorkspacesStore.swift */; };
 		WAC000012D3517B9063BA97B /* WindowAccessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = WAC000022D3517B9063BA97B /* WindowAccessor.swift */; };
 		WAM000012D3517B9063BA97B /* WineAppMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = WAM000022D3517B9063BA97B /* WineAppMonitor.swift */; };
-		ABG000012D3517B9063BA97B /* AppBundleGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABG000022D3517B9063BA97B /* AppBundleGenerator.swift */; };
-		WIM000012D3517B9063BA97B /* WinetricksInstallManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = WIM000022D3517B9063BA97B /* WinetricksInstallManager.swift */; };
-		A10000007A000001 /* PodoSojuKit in Frameworks */ = {isa = PBXBuildFile; productRef = A10000008A000001 /* PodoSojuKit */; };
+		WSSV00012D3517B9063BA97B /* WorkspaceSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WSSV00022D3517B9063BA97B /* WorkspaceSettingsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		5C50F89E3EE32BD75606C6C8 /* AboutView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AboutView.swift; path = PodoSoju/Views/AboutView.swift; sourceTree = SOURCE_ROOT; };
+		2160B4D3A93A2922921DEB55 /* PodoSojuApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PodoSoju/PodoSojuApp.swift; sourceTree = SOURCE_ROOT; };
+		25EEC84A0A97C2007FB7945B /* LogSettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LogSettingsView.swift; path = PodoSoju/Views/Settings/LogSettingsView.swift; sourceTree = SOURCE_ROOT; };
 		2CDBD84E393435351F4D20A4 /* AddProgramView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AddProgramView.swift; path = PodoSoju/Views/Creation/AddProgramView.swift; sourceTree = SOURCE_ROOT; };
-		C83AD637ECE2A3D4EA4E87E3 /* ContentView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PodoSoju/ContentView.swift; sourceTree = SOURCE_ROOT; };
-		C6C69B1BFA09347CF2149063 /* DesktopIcon.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DesktopIcon.swift; path = PodoSoju/Models/DesktopIcon.swift; sourceTree = SOURCE_ROOT; };
+		3A5957A02596EF19E339C16D /* SettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SettingsView.swift; path = PodoSoju/Views/Settings/SettingsView.swift; sourceTree = SOURCE_ROOT; };
+		3F8D253DE5D39D588755C846 /* ShortcutsGridView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ShortcutsGridView.swift; path = PodoSoju/Views/Workspace/ShortcutsGridView.swift; sourceTree = SOURCE_ROOT; };
+		5C50F89E3EE32BD75606C6C8 /* AboutView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AboutView.swift; path = PodoSoju/Views/AboutView.swift; sourceTree = SOURCE_ROOT; };
+		6572663D7438CFFD21662352 /* ShortcutView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ShortcutView.swift; path = PodoSoju/Views/Workspace/ShortcutView.swift; sourceTree = SOURCE_ROOT; };
 		7CC150328B7EFBC099981C74 /* GraphicsSettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = GraphicsSettingsView.swift; path = PodoSoju/Views/Settings/GraphicsSettingsView.swift; sourceTree = SOURCE_ROOT; };
 		85AD201463E12AFF642721B9 /* InstallationProgressView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = InstallationProgressView.swift; path = PodoSoju/Views/Installation/InstallationProgressView.swift; sourceTree = SOURCE_ROOT; };
-		25EEC84A0A97C2007FB7945B /* LogSettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LogSettingsView.swift; path = PodoSoju/Views/Settings/LogSettingsView.swift; sourceTree = SOURCE_ROOT; };
+		971A66AB30ADA6DB3E644DEF /* ProgramSelectionView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ProgramSelectionView.swift; path = PodoSoju/Views/Installation/ProgramSelectionView.swift; sourceTree = SOURCE_ROOT; };
+		A10000009A000001 /* PodoSoju.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PodoSoju.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1000000CA000001 /* PodoSojuKit */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = PodoSojuKit; path = PodoSojuKit; sourceTree = "<group>"; };
+		AA16C7BAB4765E4E3C04A6C3 /* WinetricksView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WinetricksView.swift; path = PodoSoju/Views/Workspace/WinetricksView.swift; sourceTree = SOURCE_ROOT; };
+		ABG000022D3517B9063BA97B /* AppBundleGenerator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AppBundleGenerator.swift; path = PodoSoju/Services/AppBundleGenerator.swift; sourceTree = SOURCE_ROOT; };
+		AFCE5646F437B39D37FBC422 /* WorkspaceCreationView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WorkspaceCreationView.swift; path = PodoSoju/Views/Creation/WorkspaceCreationView.swift; sourceTree = SOURCE_ROOT; };
+		C6C69B1BFA09347CF2149063 /* DesktopIcon.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DesktopIcon.swift; path = PodoSoju/Models/DesktopIcon.swift; sourceTree = SOURCE_ROOT; };
+		C83AD637ECE2A3D4EA4E87E3 /* ContentView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PodoSoju/ContentView.swift; sourceTree = SOURCE_ROOT; };
 		LMV00002B9063BA97B0001 /* LogModalView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LogModalView.swift; path = PodoSoju/Views/Settings/LogModalView.swift; sourceTree = SOURCE_ROOT; };
 		LWV00002B9063BA97B0001 /* LogWindowView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LogWindowView.swift; path = PodoSoju/Views/Settings/LogWindowView.swift; sourceTree = SOURCE_ROOT; };
-		2160B4D3A93A2922921DEB55 /* PodoSojuApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PodoSoju/PodoSojuApp.swift; sourceTree = SOURCE_ROOT; };
-		971A66AB30ADA6DB3E644DEF /* ProgramSelectionView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ProgramSelectionView.swift; path = PodoSoju/Views/Installation/ProgramSelectionView.swift; sourceTree = SOURCE_ROOT; };
-		3A5957A02596EF19E339C16D /* SettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SettingsView.swift; path = PodoSoju/Views/Settings/SettingsView.swift; sourceTree = SOURCE_ROOT; };
-		6572663D7438CFFD21662352 /* ShortcutView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ShortcutView.swift; path = PodoSoju/Views/Workspace/ShortcutView.swift; sourceTree = SOURCE_ROOT; };
-		3F8D253DE5D39D588755C846 /* ShortcutsGridView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ShortcutsGridView.swift; path = PodoSoju/Views/Workspace/ShortcutsGridView.swift; sourceTree = SOURCE_ROOT; };
-		AFCE5646F437B39D37FBC422 /* WorkspaceCreationView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WorkspaceCreationView.swift; path = PodoSoju/Views/Creation/WorkspaceCreationView.swift; sourceTree = SOURCE_ROOT; };
-		WSSV00022D3517B9063BA97B /* WorkspaceSettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WorkspaceSettingsView.swift; path = PodoSoju/Views/Workspace/WorkspaceSettingsView.swift; sourceTree = SOURCE_ROOT; };
 		OWS000022D3517B9063BA97B /* OpenWorkspacesStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PodoSoju/OpenWorkspacesStore.swift; sourceTree = SOURCE_ROOT; };
 		WAC000022D3517B9063BA97B /* WindowAccessor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PodoSoju/WindowAccessor.swift; sourceTree = SOURCE_ROOT; };
 		WAM000022D3517B9063BA97B /* WineAppMonitor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WineAppMonitor.swift; path = PodoSoju/Services/WineAppMonitor.swift; sourceTree = SOURCE_ROOT; };
-		ABG000022D3517B9063BA97B /* AppBundleGenerator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AppBundleGenerator.swift; path = PodoSoju/Services/AppBundleGenerator.swift; sourceTree = SOURCE_ROOT; };
-		WIM000022D3517B9063BA97B /* WinetricksInstallManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WinetricksInstallManager.swift; path = PodoSoju/Services/WinetricksInstallManager.swift; sourceTree = SOURCE_ROOT; };
-		A10000009A000001 /* PodoSoju.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PodoSoju.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		A1000000CA000001 /* PodoSojuKit */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = PodoSojuKit; path = PodoSojuKit; sourceTree = "<group>"; };
+		WSSV00022D3517B9063BA97B /* WorkspaceSettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WorkspaceSettingsView.swift; path = PodoSoju/Views/Workspace/WorkspaceSettingsView.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -69,53 +69,25 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		A1000000EA000001 = {
+		0D7626413CCF860C82715CA5 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
-				A1000000CA000001 /* PodoSojuKit */,
-				A1000000FA000001 /* Soju */,
-				A10000010A000001 /* Products */,
+				7CC150328B7EFBC099981C74 /* GraphicsSettingsView.swift */,
+				LMV00002B9063BA97B0001 /* LogModalView.swift */,
+				25EEC84A0A97C2007FB7945B /* LogSettingsView.swift */,
+				LWV00002B9063BA97B0001 /* LogWindowView.swift */,
+				3A5957A02596EF19E339C16D /* SettingsView.swift */,
 			);
+			name = Settings;
 			sourceTree = "<group>";
 		};
-		A10000010A000001 /* Products */ = {
+		2BAA3D442E2F8E3F1B673DDB /* Installation */ = {
 			isa = PBXGroup;
 			children = (
-				A10000009A000001 /* PodoSoju.app */,
+				85AD201463E12AFF642721B9 /* InstallationProgressView.swift */,
+				971A66AB30ADA6DB3E644DEF /* ProgramSelectionView.swift */,
 			);
-			name = Products;
-			sourceTree = "<group>";
-		};
-		A1000000FA000001 /* PodoSoju */ = {
-			isa = PBXGroup;
-			children = (
-				A1C86A29E589D48EC70B6A32 /* Models */,
-				SVC000012D3517B9063BA97B /* Services */,
-				38DF21AEF4612506D6BE5CBE /* Views */,
-				C83AD637ECE2A3D4EA4E87E3 /* ContentView.swift */,
-				2160B4D3A93A2922921DEB55 /* PodoSojuApp.swift */,
-				OWS000022D3517B9063BA97B /* OpenWorkspacesStore.swift */,
-				WAC000022D3517B9063BA97B /* WindowAccessor.swift */,
-			);
-			path = PodoSoju;
-			sourceTree = "<group>";
-		};
-		SVC000012D3517B9063BA97B /* Services */ = {
-			isa = PBXGroup;
-			children = (
-				ABG000022D3517B9063BA97B /* AppBundleGenerator.swift */,
-				WAM000022D3517B9063BA97B /* WineAppMonitor.swift */,
-				WIM000022D3517B9063BA97B /* WinetricksInstallManager.swift */,
-			);
-			name = Services;
-			sourceTree = "<group>";
-		};
-		A1C86A29E589D48EC70B6A32 /* Models */ = {
-			isa = PBXGroup;
-			children = (
-				C6C69B1BFA09347CF2149063 /* DesktopIcon.swift */,
-			);
-			name = Models;
+			name = Installation;
 			sourceTree = "<group>";
 		};
 		38DF21AEF4612506D6BE5CBE /* Views */ = {
@@ -139,35 +111,63 @@
 			name = Creation;
 			sourceTree = "<group>";
 		};
-		2BAA3D442E2F8E3F1B673DDB /* Installation */ = {
-			isa = PBXGroup;
-			children = (
-				85AD201463E12AFF642721B9 /* InstallationProgressView.swift */,
-				971A66AB30ADA6DB3E644DEF /* ProgramSelectionView.swift */,
-			);
-			name = Installation;
-			sourceTree = "<group>";
-		};
-		0D7626413CCF860C82715CA5 /* Settings */ = {
-			isa = PBXGroup;
-			children = (
-				7CC150328B7EFBC099981C74 /* GraphicsSettingsView.swift */,
-				LMV00002B9063BA97B0001 /* LogModalView.swift */,
-				25EEC84A0A97C2007FB7945B /* LogSettingsView.swift */,
-				LWV00002B9063BA97B0001 /* LogWindowView.swift */,
-				3A5957A02596EF19E339C16D /* SettingsView.swift */,
-			);
-			name = Settings;
-			sourceTree = "<group>";
-		};
 		8189E9FCEEFCC18B7B136A04 /* Workspace */ = {
 			isa = PBXGroup;
 			children = (
 				6572663D7438CFFD21662352 /* ShortcutView.swift */,
 				3F8D253DE5D39D588755C846 /* ShortcutsGridView.swift */,
 				WSSV00022D3517B9063BA97B /* WorkspaceSettingsView.swift */,
+				AA16C7BAB4765E4E3C04A6C3 /* WinetricksView.swift */,
 			);
 			name = Workspace;
+			sourceTree = "<group>";
+		};
+		A1000000EA000001 = {
+			isa = PBXGroup;
+			children = (
+				A1000000CA000001 /* PodoSojuKit */,
+				A1000000FA000001 /* PodoSoju */,
+				A10000010A000001 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A1000000FA000001 /* PodoSoju */ = {
+			isa = PBXGroup;
+			children = (
+				A1C86A29E589D48EC70B6A32 /* Models */,
+				SVC000012D3517B9063BA97B /* Services */,
+				38DF21AEF4612506D6BE5CBE /* Views */,
+				C83AD637ECE2A3D4EA4E87E3 /* ContentView.swift */,
+				2160B4D3A93A2922921DEB55 /* PodoSojuApp.swift */,
+				OWS000022D3517B9063BA97B /* OpenWorkspacesStore.swift */,
+				WAC000022D3517B9063BA97B /* WindowAccessor.swift */,
+			);
+			path = PodoSoju;
+			sourceTree = "<group>";
+		};
+		A10000010A000001 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A10000009A000001 /* PodoSoju.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A1C86A29E589D48EC70B6A32 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				C6C69B1BFA09347CF2149063 /* DesktopIcon.swift */,
+			);
+			name = Models;
+			sourceTree = "<group>";
+		};
+		SVC000012D3517B9063BA97B /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				ABG000022D3517B9063BA97B /* AppBundleGenerator.swift */,
+				WAM000022D3517B9063BA97B /* WineAppMonitor.swift */,
+			);
+			name = Services;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -222,7 +222,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				A10000011A000001 /* Soju */,
+				A10000011A000001 /* PodoSoju */,
 			);
 		};
 /* End PBXProject section */
@@ -262,7 +262,7 @@
 				WAC000012D3517B9063BA97B /* WindowAccessor.swift in Sources */,
 				WAM000012D3517B9063BA97B /* WineAppMonitor.swift in Sources */,
 				ABG000012D3517B9063BA97B /* AppBundleGenerator.swift in Sources */,
-				WIM000012D3517B9063BA97B /* WinetricksInstallManager.swift in Sources */,
+				83483EE7B8DD4D0726CD8763 /* WinetricksView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

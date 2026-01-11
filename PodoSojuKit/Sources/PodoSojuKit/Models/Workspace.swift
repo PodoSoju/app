@@ -667,8 +667,10 @@ public class Program: Identifiable, Hashable, ObservableObject, @unchecked Senda
                 let isInstaller = InstallerDetector.isInstaller(self.url)
                 var additionalEnv: [String: String] = [:]
 
-                // Set exe path for window identification
-                additionalEnv["SOJU_EXE_PATH"] = self.url.path(percentEncoded: false)
+                // Set exe path for Soju app identification (Dock title, icon extraction)
+                let exeUnixPath = self.url.path(percentEncoded: false)
+                additionalEnv["SOJU_APP_PATH"] = exeUnixPath
+                additionalEnv["SOJU_APP_NAME"] = self.url.deletingPathExtension().lastPathComponent
 
                 if isInstaller {
                     Logger.podoSojuKit.info("🔧 Installer detected - enabling Wine debug output", category: category)

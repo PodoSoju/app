@@ -66,3 +66,38 @@ public struct PinnedProgram: Codable, Hashable, Equatable, Identifiable {
         self.url = try container.decodeIfPresent(URL.self, forKey: .url)
     }
 }
+
+// MARK: - Winetricks
+
+/// Winetricks category types
+public enum WinetricksCategories: String, CaseIterable, Sendable {
+    case apps
+    case benchmarks
+    case dlls
+    case fonts
+    case games
+    case settings
+}
+
+/// A single winetricks verb (installable component)
+public struct WinetricksVerb: Identifiable, Sendable {
+    public var id = UUID()
+    public var name: String
+    public var description: String
+
+    public init(name: String, description: String) {
+        self.name = name
+        self.description = description
+    }
+}
+
+/// A category of winetricks verbs
+public struct WinetricksCategory: Sendable {
+    public var category: WinetricksCategories
+    public var verbs: [WinetricksVerb]
+
+    public init(category: WinetricksCategories, verbs: [WinetricksVerb]) {
+        self.category = category
+        self.verbs = verbs
+    }
+}

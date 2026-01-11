@@ -8,6 +8,8 @@
 import Foundation
 import os.log
 import CoreGraphics
+import Darwin
+import AppKit
 
 /// Soju (Wine alternative) 관리자
 /// - Soju 바이너리 경로 관리
@@ -199,11 +201,44 @@ public final class SojuManager: @unchecked Sendable {
 
         // SOJU 패치용 환경변수 추가
         var envWithSoju = additionalEnv
-        // exe 경로 추출 (첫 번째 .exe 인자)
+
+        // exe 경로 추출 및 정규화 (첫 번째 .exe 인자)
         if let exePath = args.first(where: { $0.lowercased().hasSuffix(".exe") }) {
-            envWithSoju["SOJU_EXE_PATH"] = exePath
-            Logger.podoSojuKit.debug("SOJU_EXE_PATH set to: \(exePath)", category: "Soju")
+            // Unix 경로로 정규화
+            let unixPath: String
+            if exePath.hasPrefix("/") {
+                // 이미 Unix 경로
+                unixPath = exePath
+            } else {
+                // Windows 경로 → Unix 경로 변환
+                // C:\path\to\app.exe → {workspace}/drive_c/path/to/app.exe
+                let winPath = exePath.replacingOccurrences(of: "\\", with: "/")
+                if winPath.count >= 2,
+                   let drive = winPath.first?.lowercased,
+                   winPath.dropFirst().first == ":" {
+                    let relativePath = String(winPath.dropFirst(3)) // Remove "C:/"
+                    unixPath = workspace.url
+                        .appendingPathComponent("drive_\(drive)")
+                        .appendingPathComponent(relativePath)
+                        .path(percentEncoded: false)
+                } else {
+                    // 알 수 없는 형식은 그대로
+                    unixPath = exePath
+                }
+            }
+
+            // SOJU_APP_PATH: Unix 경로
+            envWithSoju["SOJU_APP_PATH"] = unixPath
+            Logger.podoSojuKit.debug("SOJU_APP_PATH set to: \(unixPath)", category: "Soju")
+
+            // SOJU_APP_NAME: 파일명 (확장자 제외)
+            let appName = URL(fileURLWithPath: unixPath)
+                .deletingPathExtension()
+                .lastPathComponent
+            envWithSoju["SOJU_APP_NAME"] = appName
+            Logger.podoSojuKit.debug("SOJU_APP_NAME set to: \(appName)", category: "Soju")
         }
+
         // 워크스페이스 ID 설정 (URL의 마지막 컴포넌트가 UUID)
         let workspaceId = workspace.url.lastPathComponent
         envWithSoju["SOJU_WORKSPACE_ID"] = workspaceId
@@ -402,22 +437,14 @@ public final class SojuManager: @unchecked Sendable {
             throw SojuError.winetricksNotFound
         }
 
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/bash")
-        process.arguments = [winetricksBinary.path, "-q", "--force", component]
-        process.currentDirectoryURL = workspace.url
-
         // winetricks용 환경변수 설정
         var env = constructEnvironment(for: workspace)
         env["WINE"] = wineBinary.path
         env["WINESERVER"] = wineserverBinary.path
         env["PATH"] = "\(binFolder.path):" + (env["PATH"] ?? "/usr/bin:/bin")
-        env["TERM"] = "xterm"  // wget 진행률 출력을 위해
+        env["TERM"] = "xterm-256color"  // wget 진행률 출력을 위해
 
-        process.environment = env
-        process.qualityOfService = .userInitiated
-
-        Logger.podoSojuKit.info("🔧 Running winetricks : \(component)", category: "Soju")
+        Logger.podoSojuKit.info("🔧 Running winetricks with pty: \(component)", category: "Soju")
 
         // 상태 추적 변수
         let startTime = Date()
@@ -426,7 +453,13 @@ public final class SojuManager: @unchecked Sendable {
         var isInstalling = false
         var lastDownloadPercent = -1
 
-        for await output in try process.runStream(name: "winetricks \(component)") {
+        for await output in try runWithPty(
+            command: "/bin/bash",
+            args: [winetricksBinary.path, "-q", "--force", component],
+            env: env,
+            workingDirectory: workspace.url,
+            name: "winetricks \(component)"
+        ) {
             switch output {
             case .message(let message), .error(let message):
                 // 1. 전체 출력 DEBUG 로깅
@@ -449,7 +482,6 @@ public final class SojuManager: @unchecked Sendable {
                 }
 
                 // 1. "Downloading" 문자열 감지 -> downloading 상태
-                // wget은 tty가 아니면 진행률을 출력하지 않으므로, winetricks 출력으로 감지
                 if message.contains("Downloading") || message.lowercased().contains("download") {
                     if !isDownloading {
                         isDownloading = true
@@ -458,8 +490,8 @@ public final class SojuManager: @unchecked Sendable {
                     }
                 }
 
-                // 2. wget 진행률 파싱: "50K .......... 45% 2.5M" 패턴 (tty일 때만 동작)
-                // 정규식: 숫자 + % 형식
+                // 2. wget 진행률 파싱: "50K .......... 45% 2.5M" 또는 " 45%" 패턴
+                // pty를 사용하므로 wget이 진행률을 출력함
                 if let range = message.range(of: #"\d+%"#, options: .regularExpression) {
                     let percentStr = message[range].dropLast() // % 제거
                     if let percent = Int(percentStr) {
@@ -504,6 +536,277 @@ public final class SojuManager: @unchecked Sendable {
 
         let totalElapsed = Int(Date().timeIntervalSince(startTime))
         Logger.podoSojuKit.info("✅ winetricks completed: \(component) (took \(totalElapsed)s)", category: "Soju")
+    }
+
+    // MARK: - Winetricks Verb Listing
+
+    /// Parse winetricks verbs from `winetricks list-all` output
+    /// - Returns: Array of WinetricksCategory containing all available verbs
+    public func listWinetricksVerbs() async throws -> [WinetricksCategory] {
+        try validate()
+
+        guard FileManager.default.fileExists(atPath: winetricksBinary.path) else {
+            throw SojuError.winetricksNotFound
+        }
+
+        Logger.podoSojuKit.info("📋 Listing winetricks verbs...", category: "Soju")
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/bash")
+        process.arguments = [winetricksBinary.path, "list-all"]
+
+        let outputPipe = Pipe()
+        process.standardOutput = outputPipe
+        process.standardError = FileHandle.nullDevice
+
+        try process.run()
+        process.waitUntilExit()
+
+        let data = outputPipe.fileHandleForReading.readDataToEndOfFile()
+        guard let output = String(data: data, encoding: .utf8) else {
+            Logger.podoSojuKit.error("Failed to decode winetricks output", category: "Soju")
+            return []
+        }
+
+        return parseWinetricksOutput(output)
+    }
+
+    /// Parse winetricks list-all output into categories and verbs
+    /// Output format:
+    /// ```
+    /// ===== apps =====
+    /// 7zip                     7-Zip 24.09 (Igor Pavlov, 2024) [downloadable]
+    /// ===== dlls =====
+    /// vcrun2019                Visual C++ 2015-2019 ...
+    /// ```
+    private func parseWinetricksOutput(_ output: String) -> [WinetricksCategory] {
+        let lines = output.components(separatedBy: "\n")
+        var categories: [WinetricksCategory] = []
+        var currentCategory: WinetricksCategory?
+
+        for line in lines {
+            // Categories are labeled as "===== <name> ====="
+            if line.starts(with: "=====") {
+                // If we have a current category, add it to the list
+                if let existingCategory = currentCategory {
+                    categories.append(existingCategory)
+                }
+
+                // Create a new category
+                let categoryName = line
+                    .replacingOccurrences(of: "=====", with: "")
+                    .trimmingCharacters(in: .whitespaces)
+
+                if let category = WinetricksCategories(rawValue: categoryName) {
+                    currentCategory = WinetricksCategory(category: category, verbs: [])
+                } else {
+                    currentCategory = nil
+                }
+            } else {
+                guard currentCategory != nil else { continue }
+
+                // Parse verb line: "verbname                Description text here"
+                let trimmedLine = line.trimmingCharacters(in: .whitespaces)
+                guard !trimmedLine.isEmpty else { continue }
+
+                // Split on first whitespace sequence
+                let components = trimmedLine.components(separatedBy: " ")
+                guard !components.isEmpty else { continue }
+
+                let verbName = components[0]
+                guard !verbName.isEmpty else { continue }
+
+                let verbDescription = trimmedLine
+                    .replacingOccurrences(of: "\(verbName) ", with: "")
+                    .trimmingCharacters(in: .whitespaces)
+
+                currentCategory?.verbs.append(
+                    WinetricksVerb(name: verbName, description: verbDescription)
+                )
+            }
+        }
+
+        // Add the last category
+        if let existingCategory = currentCategory {
+            categories.append(existingCategory)
+        }
+
+        Logger.podoSojuKit.info("📋 Parsed \(categories.count) categories", category: "Soju")
+        return categories
+    }
+
+    /// Run winetricks command in Terminal.app (Whisky-style)
+    /// - Parameters:
+    ///   - command: The winetricks verb/command to run (e.g., "vcrun2019")
+    ///   - workspace: Target workspace for WINEPREFIX
+    public func runWinetricksInTerminal(command: String, workspace: Workspace) async {
+        guard FileManager.default.fileExists(atPath: winetricksBinary.path) else {
+            await MainActor.run {
+                let alert = NSAlert()
+                alert.messageText = "Winetricks Not Found"
+                alert.informativeText = "winetricks is not installed in the Soju installation."
+                alert.alertStyle = .critical
+                alert.addButton(withTitle: "OK")
+                alert.runModal()
+            }
+            return
+        }
+
+        // Build the winetricks command with proper environment (escape quotes for AppleScript)
+        let winetricksCmd = "DYLD_FALLBACK_LIBRARY_PATH='\(libFolder.path)' WINE='\(wineBinary.path)' WINESERVER='\(wineserverBinary.path)' WINEPREFIX='\(workspace.winePrefixPath)' PATH='\(binFolder.path)':$PATH '\(winetricksBinary.path)' \(command)"
+
+        let script = "tell application \"Terminal\"\nactivate\ndo script \"\(winetricksCmd)\"\nend tell"
+
+        var error: NSDictionary?
+        if let appleScript = NSAppleScript(source: script) {
+            appleScript.executeAndReturnError(&error)
+
+            if let error = error {
+                Logger.podoSojuKit.error("AppleScript error: \(error)", category: "Soju")
+                if let description = error["NSAppleScriptErrorMessage"] as? String {
+                    await MainActor.run {
+                        let alert = NSAlert()
+                        alert.messageText = "Winetricks Error"
+                        alert.informativeText = "Failed to run winetricks \(command): \(description)"
+                        alert.alertStyle = .critical
+                        alert.addButton(withTitle: "OK")
+                        alert.runModal()
+                    }
+                }
+            } else {
+                Logger.podoSojuKit.info("🔧 Launched winetricks '\(command)' in Terminal", category: "Soju")
+            }
+        }
+    }
+
+    // MARK: - PTY Execution
+
+    /// pseudo-terminal을 사용하여 프로세스 실행
+    /// wget 등 tty를 확인하는 프로그램의 진행률 출력을 캡처하기 위해 사용
+    /// - Parameters:
+    ///   - command: 실행할 명령 경로
+    ///   - args: 명령 인자들
+    ///   - env: 환경 변수
+    ///   - workingDirectory: 작업 디렉토리
+    ///   - name: 로깅용 프로세스 이름
+    /// - Returns: 프로세스 출력 스트림
+    private func runWithPty(
+        command: String,
+        args: [String],
+        env: [String: String],
+        workingDirectory: URL,
+        name: String
+    ) throws -> AsyncStream<ProcessOutput> {
+        var masterFd: Int32 = 0
+        var slaveFd: Int32 = 0
+
+        // pty 생성
+        guard openpty(&masterFd, &slaveFd, nil, nil, nil) == 0 else {
+            Logger.podoSojuKit.error("Failed to create pty", category: "Soju")
+            throw SojuError.ptyCreationFailed
+        }
+
+        // Swift 6 concurrency 안전성을 위해 로컬 상수로 복사
+        let master = masterFd
+        let slave = slaveFd
+
+        Logger.podoSojuKit.debug("PTY created: master=\(master), slave=\(slave)", category: "Soju")
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: command)
+        process.arguments = args
+        process.environment = env
+        process.currentDirectoryURL = workingDirectory
+        process.qualityOfService = .userInitiated
+
+        // slave를 stdin/stdout/stderr로 사용
+        let slaveHandle = FileHandle(fileDescriptor: slave, closeOnDealloc: false)
+        process.standardInput = slaveHandle
+        process.standardOutput = slaveHandle
+        process.standardError = slaveHandle
+
+        return AsyncStream { continuation in
+            Task {
+                continuation.yield(.started)
+
+                do {
+                    try process.run()
+                    Logger.podoSojuKit.info("🚀 PTY process started: \(name)", category: "Soju")
+
+                    // slave는 process에서 사용하므로 여기서 닫음
+                    close(slave)
+
+                    // master에서 출력 읽기
+                    let masterHandle = FileHandle(fileDescriptor: master, closeOnDealloc: false)
+
+                    // 읽기와 프로세스 대기를 병렬로 수행
+                    await withTaskGroup(of: Void.self) { group in
+                        // master에서 출력 읽기
+                        group.addTask {
+                            var buffer = Data()
+
+                            do {
+                                for try await byte in masterHandle.bytes {
+                                    // \r (0x0D) 또는 \n (0x0A)을 줄 구분자로 처리
+                                    if byte == 0x0D || byte == 0x0A {
+                                        if buffer.isEmpty { continue }
+
+                                        if let line = String(data: buffer, encoding: .utf8) {
+                                            let trimmed = line.trimmingCharacters(in: .whitespaces)
+                                            if !trimmed.isEmpty {
+                                                Logger.podoSojuKit.debug("📤 pty: \(trimmed)", category: "Process")
+                                                continuation.yield(.message(trimmed))
+                                            }
+                                        }
+                                        buffer.removeAll(keepingCapacity: true)
+                                    } else {
+                                        buffer.append(byte)
+                                    }
+                                }
+
+                                // 남은 버퍼 처리
+                                if !buffer.isEmpty, let line = String(data: buffer, encoding: .utf8) {
+                                    let trimmed = line.trimmingCharacters(in: .whitespaces)
+                                    if !trimmed.isEmpty {
+                                        continuation.yield(.message(trimmed))
+                                    }
+                                }
+                            } catch {
+                                // 프로세스 종료 시 EIO 에러 발생 - 정상
+                                if (error as NSError).domain == NSPOSIXErrorDomain &&
+                                   (error as NSError).code == Int(EIO) {
+                                    Logger.podoSojuKit.debug("PTY read completed (EIO)", category: "Process")
+                                } else {
+                                    Logger.podoSojuKit.error("PTY read error: \(error)", category: "Process")
+                                }
+                            }
+                        }
+
+                        // 프로세스 종료 대기
+                        group.addTask {
+                            process.waitUntilExit()
+                        }
+
+                        await group.waitForAll()
+                    }
+
+                    // 리소스 정리
+                    close(master)
+
+                    let exitCode = process.terminationStatus
+                    Logger.podoSojuKit.info("PTY process '\(name)' terminated with code \(exitCode)", category: "Process")
+                    continuation.yield(.terminated(exitCode))
+
+                } catch {
+                    Logger.podoSojuKit.error("💥 PTY process failed: \(error)", category: "Soju")
+                    close(slave)
+                    close(master)
+                    continuation.yield(.terminated(-1))
+                }
+
+                continuation.finish()
+            }
+        }
     }
 
     /// Soju 버전 확인
@@ -943,6 +1246,7 @@ public enum SojuError: LocalizedError {
     case pathConversionFailed(String)
     case winetricksNotFound
     case winetricksFailed(Int32)
+    case ptyCreationFailed
 
     public var errorDescription: String? {
         switch self {
@@ -958,6 +1262,8 @@ public enum SojuError: LocalizedError {
             return "winetricks not found in Soju installation."
         case .winetricksFailed(let code):
             return "winetricks failed with exit code \(code)"
+        case .ptyCreationFailed:
+            return "Failed to create pseudo-terminal for process execution."
         }
     }
 }

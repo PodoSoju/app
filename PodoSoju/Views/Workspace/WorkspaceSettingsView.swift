@@ -13,6 +13,7 @@ struct WorkspaceSettingsView: View {
     @ObservedObject var workspace: Workspace
     @Environment(\.dismiss) private var dismiss
     @State private var selectedTab = 0
+    @State private var showWinetricks = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -21,7 +22,6 @@ struct WorkspaceSettingsView: View {
                 Text("General").tag(0)
                 Text("Wine").tag(1)
                 Text("Graphics").tag(2)
-                Text("Winetricks").tag(3)
             }
             .pickerStyle(.segmented)
             .padding()
@@ -37,8 +37,6 @@ struct WorkspaceSettingsView: View {
                     WineSettingsTab(workspace: workspace)
                 case 2:
                     GraphicsSettingsTab(workspace: workspace)
-                case 3:
-                    WinetricksTab(workspace: workspace)
                 default:
                     GeneralSettingsTab(workspace: workspace)
                 }
@@ -47,19 +45,28 @@ struct WorkspaceSettingsView: View {
 
             Divider()
 
-            // Done button
+            // Bottom buttons
             HStack {
+                Button("Winetricks...") {
+                    showWinetricks = true
+                }
+                .buttonStyle(.bordered)
+
                 Spacer()
+
                 Button("Done") {
                     let currentSettings = workspace.settings
                     workspace.settings = currentSettings
                     dismiss()
                 }
                 .keyboardShortcut(.defaultAction)
-                .padding()
             }
+            .padding()
         }
         .frame(width: 500, height: 400)
+        .sheet(isPresented: $showWinetricks) {
+            WinetricksView(workspace: workspace)
+        }
     }
 }
 
@@ -187,200 +194,6 @@ struct GraphicsSettingsTab: View {
             }
         }
         .formStyle(.grouped)
-    }
-}
-
-// MARK: - Winetricks Tab
-
-struct WinetricksTab: View {
-    @ObservedObject var workspace: Workspace
-
-    /// Shared install manager - persists across view lifecycle
-    @StateObject private var installManager = WinetricksInstallManager.shared
-
-    private let commonComponents = [
-        ("vcrun2019", "Visual C++ 2015-2022"),
-        ("vcrun2022", "Visual C++ 2022"),
-        ("d3dx9", "DirectX 9"),
-        ("d3dx10", "DirectX 10"),
-        ("d3dx11_43", "DirectX 11"),
-        ("dotnet48", ".NET Framework 4.8"),
-        ("dotnet6", ".NET 6.0"),
-        ("corefonts", "Core Fonts"),
-        ("cjkfonts", "CJK Fonts (Korean/Japanese/Chinese)"),
-    ]
-
-    var body: some View {
-        Form {
-            Section("Common Components") {
-                ForEach(commonComponents, id: \.0) { component in
-                    WinetricksComponentRow(
-                        componentId: component.0,
-                        componentName: component.1,
-                        status: installManager.getStatus(
-                            workspace: workspaceId,
-                            component: component.0
-                        ),
-                        onInstall: { installComponent(component.0) }
-                    )
-                }
-            }
-        }
-        .formStyle(.grouped)
-    }
-
-    private var workspaceId: String {
-        workspace.url.lastPathComponent
-    }
-
-    private func installComponent(_ componentId: String) {
-        // Prevent re-installing if already in progress or succeeded
-        let currentStatus = installManager.getStatus(workspace: workspaceId, component: componentId)
-        switch currentStatus {
-        case .downloading, .installing, .success:
-            return
-        case .idle, .failed:
-            break
-        }
-
-        installManager.setStatus(workspace: workspaceId, component: componentId, status: .downloading(percent: 0))
-
-        Task {
-            do {
-                try await SojuManager.shared.runWinetricks(
-                    workspace: workspace,
-                    component: componentId
-                ) { progress in
-                    Task { @MainActor in
-                        switch progress {
-                        case .downloading(let percent):
-                            self.installManager.setStatus(
-                                workspace: self.workspaceId,
-                                component: componentId,
-                                status: .downloading(percent: percent)
-                            )
-                        case .installing:
-                            self.installManager.setStatus(
-                                workspace: self.workspaceId,
-                                component: componentId,
-                                status: .installing
-                            )
-                        }
-                    }
-                }
-
-                await MainActor.run {
-                    installManager.setStatus(workspace: workspaceId, component: componentId, status: .success)
-                }
-            } catch {
-                await MainActor.run {
-                    installManager.setStatus(
-                        workspace: workspaceId,
-                        component: componentId,
-                        status: .failed(error.localizedDescription)
-                    )
-                }
-            }
-        }
-    }
-}
-
-/// Individual row for a winetricks component with independent install button
-struct WinetricksComponentRow: View {
-    let componentId: String
-    let componentName: String
-    let status: InstallStatus
-    let onInstall: () -> Void
-
-    /// Check if install is in progress
-    private var isInstalling: Bool {
-        switch status {
-        case .downloading, .installing:
-            return true
-        default:
-            return false
-        }
-    }
-
-    var body: some View {
-        HStack {
-            VStack(alignment: .leading) {
-                Text(componentName)
-                    .font(.body)
-                    .foregroundColor(status == .success ? .secondary : .primary)
-                Text(componentId)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-
-            Spacer()
-
-            // Status / Install button
-            statusView
-        }
-    }
-
-    @ViewBuilder
-    private var statusView: some View {
-        switch status {
-        case .idle:
-            Button("Install") {
-                onInstall()
-            }
-            .buttonStyle(.bordered)
-
-        case .downloading(let percent):
-            HStack(spacing: 6) {
-                ProgressView()
-                    .scaleEffect(0.7)
-                    .frame(width: 14, height: 14)
-                if percent < 0 {
-                    Text("Downloading...")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                } else {
-                    Text("Downloading \(percent)%")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .monospacedDigit()
-                }
-            }
-            .frame(minWidth: 120, alignment: .trailing)
-
-        case .installing:
-            HStack(spacing: 6) {
-                ProgressView()
-                    .scaleEffect(0.7)
-                    .frame(width: 14, height: 14)
-                Text("Installing...")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            .frame(minWidth: 120, alignment: .trailing)
-
-        case .success:
-            HStack(spacing: 4) {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(.green)
-                    .font(.system(size: 14))
-                Text("Installed")
-                    .font(.caption)
-                    .foregroundColor(.green)
-            }
-
-        case .failed(let message):
-            HStack(spacing: 4) {
-                Image(systemName: "xmark.circle.fill")
-                    .foregroundColor(.red)
-                    .font(.system(size: 14))
-                Button("Retry") {
-                    onInstall()
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-            }
-            .help("Failed: \(message)")
-        }
     }
 }
 
