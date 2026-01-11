@@ -55,9 +55,11 @@ struct PodoSojuApp: App {
         }
 
         // 로그 창 (별도 윈도우) - Cmd+Option+L로 열기
+        // handlesExternalEvents(matching: [])로 앱 시작 시 자동으로 열리지 않음
         Window("Wine Logs", id: "log-window") {
             LogWindowView()
         }
+        .handlesExternalEvents(matching: [])
         .defaultSize(width: 800, height: 600)
         .keyboardShortcut("l", modifiers: [.command, .option])
     }
@@ -79,14 +81,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             WineAppMonitor.shared.startMonitoring()
         }
 
-        // 메인 윈도우에 delegate 설정 + Wine Logs 창 닫기
+        // 메인 윈도우에 delegate 설정
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            for window in NSApp.windows {
-                if window.title == "Wine Logs" {
-                    window.close()  // Wine Logs 창은 기본으로 닫기
-                } else if window.isVisible {
-                    window.delegate = self
-                }
+            for window in NSApp.windows where window.isVisible {
+                window.delegate = self
             }
         }
 

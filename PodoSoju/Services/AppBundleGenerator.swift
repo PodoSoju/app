@@ -114,21 +114,32 @@ class AppBundleGenerator {
 
         // launcher 스크립트 생성 - AppleScript로 PodoSoju URL scheme 실행
         // osascript를 사용하여 검은 터미널 창 없이 실행
+        // 이미 실행 중이면 PodoSoju 포커스만, 아니면 URL scheme으로 실행
         let launcherScript = """
         #!/usr/bin/osascript
 
-        -- PodoSoju 앱이 실행 중인지 확인하고 없으면 실행
-        tell application "System Events"
-            set isRunning to (exists (processes where name is "PodoSoju"))
-        end tell
+        set workspaceId to "\(workspaceId)"
+        set theURL to "\(launchURL)"
 
-        if not isRunning then
+        -- Wine 프로세스 확인 (해당 workspace)
+        set wineRunning to do shell script "pgrep -f 'Workspaces/" & workspaceId & "' 2>/dev/null || echo ''"
+
+        if wineRunning is "" then
+            -- 실행 중 아님 - PodoSoju로 실행
+            tell application "System Events"
+                set isRunning to (count of (every process whose name is "PodoSoju")) > 0
+            end tell
+
+            if not isRunning then
+                do shell script "open -g -a PodoSoju"
+                delay 1.5
+            end if
+
+            do shell script "open '" & theURL & "'"
+        else
+            -- 이미 실행 중 - PodoSoju 포커스만
             tell application "PodoSoju" to activate
-            delay 1
         end if
-
-        -- URL scheme으로 Wine 앱 실행
-        open location "\(launchURL)"
         """
 
         let launcherURL = macOSURL.appendingPathComponent("launcher")
