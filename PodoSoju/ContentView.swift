@@ -19,6 +19,7 @@ struct ContentView: View {
     @State private var showPodoSojuSetup = false
     @State private var hasCheckedPodoSoju = false
     @State private var showSettings = false
+    @State private var isCleaningZombies = false
 
     var body: some View {
         Group {
@@ -245,14 +246,26 @@ struct ContentView: View {
 
             // Bottom-right buttons (cleanup, settings, +)
             HStack(spacing: 12) {
-                // Wine 좀비 정리 버튼
-                Button(action: { cleanupWineZombies() }) {
-                    Image(systemName: "trash.circle.fill")
-                        .font(.system(size: 36))
-                        .foregroundColor(.orange)
+                // Wine 좀비 정리 버튼 (더블클릭)
+                ZStack {
+                    Circle()
+                        .fill(Color.gray.opacity(0.6))
+                        .frame(width: 36, height: 36)
+
+                    if isCleaningZombies {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .scaleEffect(0.7)
+                    } else {
+                        Image(systemName: "trash.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(.white)
+                    }
                 }
-                .buttonStyle(.plain)
-                .help("Wine 좀비 프로세스 정리")
+                .onTapGesture(count: 2) {
+                    cleanupWineZombies()
+                }
+                .help("더블클릭: Wine 좀비 프로세스 정리")
 
                 // Settings button (전체 설정)
                 Button(action: { showSettings = true }) {
@@ -284,28 +297,35 @@ struct ContentView: View {
 
     /// Wine 좀비 프로세스 정리
     private func cleanupWineZombies() {
-        let processNames = ["wine", "wineserver", "PodoJuice"]
-        var killedCount = 0
+        isCleaningZombies = true
 
-        for name in processNames {
-            let task = Process()
-            task.executableURL = URL(fileURLWithPath: "/usr/bin/pkill")
-            task.arguments = ["-9", name]
-            try? task.run()
-            task.waitUntilExit()
-            if task.terminationStatus == 0 {
-                killedCount += 1
+        Task {
+            let processNames = ["wine", "wineserver", "PodoJuice"]
+
+            for name in processNames {
+                let task = Process()
+                task.executableURL = URL(fileURLWithPath: "/usr/bin/pkill")
+                task.arguments = ["-9", name]
+                try? task.run()
+                task.waitUntilExit()
             }
+
+            // NetFile 등 Wine 앱도 정리
+            let killAllTask = Process()
+            killAllTask.executableURL = URL(fileURLWithPath: "/usr/bin/pkill")
+            killAllTask.arguments = ["-9", "-f", "C:\\\\"]  // Wine 경로 패턴
+            try? killAllTask.run()
+            killAllTask.waitUntilExit()
+
+            // 잠시 대기 후 인디케이터 종료
+            try? await Task.sleep(nanoseconds: 500_000_000)
+
+            await MainActor.run {
+                isCleaningZombies = false
+            }
+
+            Logger.podoSojuKit.info("Wine zombies cleaned up", category: "ContentView")
         }
-
-        // NetFile 등 Wine 앱도 정리
-        let killAllTask = Process()
-        killAllTask.executableURL = URL(fileURLWithPath: "/usr/bin/pkill")
-        killAllTask.arguments = ["-9", "-f", "C:\\\\"]  // Wine 경로 패턴
-        try? killAllTask.run()
-        killAllTask.waitUntilExit()
-
-        Logger.podoSojuKit.info("Wine zombies cleaned up", category: "ContentView")
     }
 
     private func createFirstWorkspace() async {
