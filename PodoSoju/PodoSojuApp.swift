@@ -70,6 +70,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         // 탭 기능 비활성화
         NSWindow.allowsAutomaticWindowTabbing = false
 
+        // Wine 앱 모니터 시작
+        Task { @MainActor in
+            WineAppMonitor.shared.startMonitoring()
+        }
+
         // 메인 윈도우에 delegate 설정
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             if let window = NSApp.windows.first {
