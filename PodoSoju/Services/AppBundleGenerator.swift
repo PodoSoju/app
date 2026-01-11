@@ -10,13 +10,16 @@ import AppKit
 import PodoSojuKit
 import os.log
 
-/// Wine 프로그램을 macOS .app 번들로 생성
+/// Wine 프로그램을 macOS .app 번들로 생성 (포도주스)
 class AppBundleGenerator {
 
     enum GeneratorError: LocalizedError {
         case createDirectoryFailed(String)
         case writePlistFailed(String)
         case writeLauncherFailed(String)
+        case writeConfigFailed(String)
+        case copyBinaryFailed(String)
+        case binaryNotFound
         case iconConversionFailed
 
         var errorDescription: String? {
@@ -27,21 +30,155 @@ class AppBundleGenerator {
                 return "Failed to write Info.plist: \(path)"
             case .writeLauncherFailed(let path):
                 return "Failed to write launcher: \(path)"
+            case .writeConfigFailed(let path):
+                return "Failed to write config.json: \(path)"
+            case .copyBinaryFailed(let path):
+                return "Failed to copy PodoJuice binary: \(path)"
+            case .binaryNotFound:
+                return "PodoJuice binary not found in app bundle"
             case .iconConversionFailed:
                 return "Failed to convert icon to icns"
             }
         }
     }
 
-    /// 앱 번들 생성
+    /// PodoJuice config.json 구조
+    struct JuiceConfig: Codable {
+        let workspaceId: String
+        let workspacePath: String
+        let targetLnk: String
+        let exePath: String
+    }
+
+    /// 포도주스 앱 번들 생성 (Native Swift wrapper)
     /// - Parameters:
     ///   - name: 앱 이름 (e.g., "NetFile")
     ///   - workspaceId: Workspace UUID
+    ///   - workspacePath: Workspace 경로 (WINEPREFIX)
+    ///   - targetLnk: 바로가기 파일명 (e.g., "NetFile.lnk")
     ///   - exePath: Windows exe 경로 (e.g., "C:\Program Files\NetFile\NetFile.exe")
     ///   - icon: 앱 아이콘 (optional)
-    ///   - destination: 저장 위치 (기본: ~/Applications)
+    ///   - destination: 저장 위치 (기본: workspace 바탕화면)
     /// - Returns: 생성된 .app 번들 URL
     static func createAppBundle(
+        name: String,
+        workspaceId: String,
+        workspacePath: String,
+        targetLnk: String,
+        exePath: String,
+        icon: NSImage? = nil,
+        destination: URL? = nil
+    ) throws -> URL {
+        let fileManager = FileManager.default
+
+        // 저장 위치 결정 (기본: workspace 바탕화면)
+        let desktopDir = destination ?? URL(fileURLWithPath: workspacePath)
+            .appendingPathComponent("drive_c/users/Public/Desktop")
+
+        // 디렉토리 생성
+        try? fileManager.createDirectory(at: desktopDir, withIntermediateDirectories: true)
+
+        // 앱 번들 경로
+        let sanitizedName = name.replacingOccurrences(of: "/", with: "-")
+        let appURL = desktopDir.appendingPathComponent("\(sanitizedName).app")
+
+        // 기존 앱 삭제
+        try? fileManager.removeItem(at: appURL)
+
+        // 디렉토리 구조 생성
+        let contentsURL = appURL.appendingPathComponent("Contents")
+        let macOSURL = contentsURL.appendingPathComponent("MacOS")
+        let resourcesURL = contentsURL.appendingPathComponent("Resources")
+
+        for dir in [contentsURL, macOSURL, resourcesURL] {
+            do {
+                try fileManager.createDirectory(at: dir, withIntermediateDirectories: true)
+            } catch {
+                throw GeneratorError.createDirectoryFailed(dir.path)
+            }
+        }
+
+        // PodoJuice 바이너리 복사
+        guard let podoJuiceBinary = Bundle.main.url(forResource: "PodoJuice", withExtension: nil) else {
+            throw GeneratorError.binaryNotFound
+        }
+
+        let executableURL = macOSURL.appendingPathComponent("PodoJuice")
+        do {
+            try fileManager.copyItem(at: podoJuiceBinary, to: executableURL)
+            try fileManager.setAttributes([.posixPermissions: 0o755], ofItemAtPath: executableURL.path)
+        } catch {
+            throw GeneratorError.copyBinaryFailed(executableURL.path)
+        }
+
+        // config.json 생성
+        let config = JuiceConfig(
+            workspaceId: workspaceId,
+            workspacePath: workspacePath,
+            targetLnk: targetLnk,
+            exePath: exePath
+        )
+
+        let configURL = resourcesURL.appendingPathComponent("config.json")
+        do {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            let configData = try encoder.encode(config)
+            try configData.write(to: configURL)
+        } catch {
+            throw GeneratorError.writeConfigFailed(configURL.path)
+        }
+
+        // Bundle identifier 생성
+        let bundleId = "com.podosoju.juice.\(sanitizedName.lowercased().replacingOccurrences(of: " ", with: "-")).\(workspaceId.prefix(8))"
+
+        // Info.plist 생성
+        var infoPlist: [String: Any] = [
+            "CFBundleDevelopmentRegion": "en",
+            "CFBundleExecutable": "PodoJuice",
+            "CFBundleIdentifier": bundleId,
+            "CFBundleInfoDictionaryVersion": "6.0",
+            "CFBundleName": name,
+            "CFBundleDisplayName": name,
+            "CFBundlePackageType": "APPL",
+            "CFBundleShortVersionString": "1.0",
+            "CFBundleVersion": "1",
+            "LSMinimumSystemVersion": "13.0",
+            "NSHighResolutionCapable": true,
+            "LSUIElement": false,  // Dock에 표시
+            // 커스텀 키 (포도주스용)
+            "PodoJuiceWorkspaceId": workspaceId,
+            "PodoJuiceExePath": exePath,
+            "PodoJuiceTargetLnk": targetLnk
+        ]
+
+        // 아이콘 저장 (있는 경우)
+        if let icon = icon {
+            let icnsURL = resourcesURL.appendingPathComponent("AppIcon.icns")
+            if let icnsData = icon.icnsData() {
+                try? icnsData.write(to: icnsURL)
+                infoPlist["CFBundleIconFile"] = "AppIcon"
+            }
+        }
+
+        let plistURL = contentsURL.appendingPathComponent("Info.plist")
+        do {
+            let plistData = try PropertyListSerialization.data(fromPropertyList: infoPlist, format: .xml, options: 0)
+            try plistData.write(to: plistURL)
+        } catch {
+            throw GeneratorError.writePlistFailed(plistURL.path)
+        }
+
+        Logger.podoSojuKit.info("Created PodoJuice app: \(appURL.path)", category: "AppBundleGenerator")
+
+        return appURL
+    }
+
+    // MARK: - Legacy AppleScript method (deprecated)
+
+    /// 앱 번들 생성 (Legacy - AppleScript 방식)
+    @available(*, deprecated, message: "Use createAppBundle with workspacePath instead")
+    static func createAppBundleLegacy(
         name: String,
         workspaceId: String,
         exePath: String,
@@ -113,8 +250,6 @@ class AppBundleGenerator {
         }
 
         // launcher 스크립트 생성 - AppleScript로 PodoSoju URL scheme 실행
-        // osascript를 사용하여 검은 터미널 창 없이 실행
-        // 이미 실행 중이면 PodoSoju 포커스만, 아니면 URL scheme으로 실행
         let launcherScript = """
         #!/usr/bin/osascript
 

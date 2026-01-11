@@ -66,7 +66,7 @@ struct ShortcutView: View {
                 runProgram()
             }
             Divider()
-            Button("Create App Bundle", systemImage: "app.badge.plus") {
+            Button("포도주스 만들기", systemImage: "drop.fill") {
                 createAppBundle()
             }
             Button("Rename", systemImage: "pencil.line") {
@@ -301,36 +301,41 @@ struct ShortcutView: View {
                 if shortcut.url.pathExtension.lowercased() == "lnk" {
                     if let targetURL = try? await ShortcutParser.parseShortcut(shortcut.url, winePrefixURL: workspace.winePrefixURL) {
                         // Windows 경로로 변환
-                        exePath = targetURL.path.replacingOccurrences(of: workspace.winePrefixURL.path, with: "C:")
-                            .replacingOccurrences(of: "/", with: "\\")
+                        exePath = convertToWindowsPath(unixPath: targetURL.path)
                     } else {
                         throw NSError(domain: "ShortcutView", code: 1, userInfo: [NSLocalizedDescriptionKey: "Failed to parse .lnk file"])
                     }
                 } else {
                     // 직접 exe 경로
-                    exePath = shortcut.url.path.replacingOccurrences(of: workspace.winePrefixURL.path, with: "C:")
-                        .replacingOccurrences(of: "/", with: "\\")
+                    exePath = convertToWindowsPath(unixPath: shortcut.url.path)
                 }
 
                 // workspace ID 추출 (URL에서)
                 let workspaceId = workspace.url.lastPathComponent
 
-                // 앱 번들 생성
+                // targetLnk: .lnk 파일이면 파일명, 아니면 앱 이름 + ".lnk"
+                let targetLnk = shortcut.url.pathExtension.lowercased() == "lnk"
+                    ? shortcut.url.lastPathComponent
+                    : "\(shortcut.name).lnk"
+
+                // 포도주스 앱 번들 생성
                 let appURL = try AppBundleGenerator.createAppBundle(
                     name: shortcut.name,
                     workspaceId: workspaceId,
+                    workspacePath: workspace.url.path,
+                    targetLnk: targetLnk,
                     exePath: exePath,
-                    icon: nil  // TODO: 아이콘 추출
+                    icon: shortcut.actualIcon
                 )
 
                 // 성공 알럿
                 await MainActor.run {
                     let alert = NSAlert()
-                    alert.messageText = "App Bundle Created"
-                    alert.informativeText = "'\(shortcut.name).app' has been created in ~/Applications.\n\nYou can add it to your Dock or Launchpad."
+                    alert.messageText = "포도주스 생성 완료"
+                    alert.informativeText = "'\(shortcut.name).app'이 바탕화면에 생성되었습니다.\n\n이 앱을 직접 실행하거나 Dock에 추가할 수 있습니다."
                     alert.alertStyle = .informational
-                    alert.addButton(withTitle: "Open in Finder")
-                    alert.addButton(withTitle: "OK")
+                    alert.addButton(withTitle: "Finder에서 보기")
+                    alert.addButton(withTitle: "확인")
 
                     let response = alert.runModal()
                     if response == .alertFirstButtonReturn {
@@ -338,14 +343,40 @@ struct ShortcutView: View {
                     }
                 }
 
-                Logger.podoSojuKit.info("Created app bundle for: \(shortcut.name)", category: "ShortcutView")
+                Logger.podoSojuKit.info("Created PodoJuice app for: \(shortcut.name)", category: "ShortcutView")
             } catch {
                 await MainActor.run {
-                    errorMessage = "Failed to create app bundle: \(error.localizedDescription)"
+                    errorMessage = "포도주스 생성 실패: \(error.localizedDescription)"
                     showError = true
                 }
             }
         }
+    }
+
+    /// Unix 경로를 Windows 경로로 변환
+    private func convertToWindowsPath(unixPath: String) -> String {
+        // workspace 경로 기준으로 drive_c 이후 부분 추출
+        let prefixPath = workspace.url.appendingPathComponent("drive_c").path
+
+        if unixPath.hasPrefix(prefixPath) {
+            let relativePath = String(unixPath.dropFirst(prefixPath.count))
+            return "C:" + relativePath.replacingOccurrences(of: "/", with: "\\")
+        }
+
+        // drive_c 외의 경우 (drive_d 등)
+        let workspacePath = workspace.url.path
+        if unixPath.hasPrefix(workspacePath) {
+            let afterWorkspace = String(unixPath.dropFirst(workspacePath.count + 1)) // +1 for "/"
+            if afterWorkspace.hasPrefix("drive_") && afterWorkspace.count > 7 {
+                let drive = afterWorkspace[afterWorkspace.index(afterWorkspace.startIndex, offsetBy: 6)].uppercased()
+                let remainder = String(afterWorkspace.dropFirst(7))
+                return "\(drive):" + remainder.replacingOccurrences(of: "/", with: "\\")
+            }
+        }
+
+        // Fallback: 원래 경로에서 직접 변환
+        return unixPath.replacingOccurrences(of: workspace.winePrefixURL.path, with: "C:")
+            .replacingOccurrences(of: "/", with: "\\")
     }
 }
 
