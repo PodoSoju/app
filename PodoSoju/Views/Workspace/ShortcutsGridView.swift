@@ -209,6 +209,8 @@ struct ShortcutsGridView: View {
         var icons: [DesktopIcon] = []
         var seenNames = Set<String>()
 
+        // First pass: collect all files and prioritize .app over .lnk
+        var allFiles: [URL] = []
         for relativePath in allPaths {
             let directoryURL = prefixURL.appendingPathComponent(relativePath)
 
@@ -226,38 +228,61 @@ struct ShortcutsGridView: View {
                 continue
             }
 
-            let lnkFiles = scanForLnkFiles(in: directoryURL, maxDepth: 3)
+            allFiles.append(contentsOf: scanForLnkFiles(in: directoryURL, maxDepth: 3))
+        }
 
-            for lnkURL in lnkFiles {
-                let name = lnkURL.deletingPathExtension().lastPathComponent
+        // Sort: .app files first (they take priority over .lnk with same name)
+        let sortedFiles = allFiles.sorted { url1, url2 in
+            let isApp1 = url1.pathExtension.lowercased() == "app"
+            let isApp2 = url2.pathExtension.lowercased() == "app"
+            if isApp1 && !isApp2 { return true }
+            if !isApp1 && isApp2 { return false }
+            return url1.lastPathComponent < url2.lastPathComponent
+        }
 
-                // Skip duplicates, uninstallers, and Wine stubs
-                guard !seenNames.contains(name.lowercased()) else { continue }
-                guard !isUninstaller(name) else { continue }
-                guard !InstallerDetector.isWineStub(lnkURL) else { continue }
+        for fileURL in sortedFiles {
+            let name = fileURL.deletingPathExtension().lastPathComponent
+            let ext = fileURL.pathExtension.lowercased()
 
-                seenNames.insert(name.lowercased())
+            // Skip duplicates, uninstallers, and Wine stubs
+            guard !seenNames.contains(name.lowercased()) else { continue }
+            guard !isUninstaller(name) else { continue }
 
-                // Check for existing icon, extract if missing
-                var iconURL = IconManager.shared.getIconURL(for: lnkURL, in: workspace.url)
-                if iconURL == nil {
-                    iconURL = await IconManager.shared.extractIcon(from: lnkURL, in: workspace.url)
-                }
-
-                let icon = DesktopIcon(
-                    name: name,
-                    url: lnkURL,
-                    iconImage: iconForProgram(name: name),
-                    iconURL: iconURL
-                )
-                icons.append(icon)
+            // For .lnk files, also check Wine stubs
+            if ext == "lnk" {
+                guard !InstallerDetector.isWineStub(fileURL) else { continue }
             }
+
+            seenNames.insert(name.lowercased())
+
+            // Get icon - for .app, use the app's icon; for .lnk, extract from exe
+            var iconURL: URL? = nil
+            if ext == "app" {
+                // PodoJuice app - icon is in Resources/AppIcon.icns
+                let appIconURL = fileURL.appendingPathComponent("Contents/Resources/AppIcon.icns")
+                if fileManager.fileExists(atPath: appIconURL.path) {
+                    iconURL = appIconURL
+                }
+            } else {
+                iconURL = IconManager.shared.getIconURL(for: fileURL, in: workspace.url)
+                if iconURL == nil {
+                    iconURL = await IconManager.shared.extractIcon(from: fileURL, in: workspace.url)
+                }
+            }
+
+            let icon = DesktopIcon(
+                name: name,
+                url: fileURL,
+                iconImage: ext == "app" ? "drop.fill" : iconForProgram(name: name),
+                iconURL: iconURL
+            )
+            icons.append(icon)
         }
 
         return icons
     }
 
-    /// Recursively scans directory for .lnk files
+    /// Recursively scans directory for .lnk files and .app bundles (PodoJuice)
     private func scanForLnkFiles(in directory: URL, maxDepth: Int, currentDepth: Int = 0) -> [URL] {
         guard currentDepth <= maxDepth else { return [] }
 
@@ -277,13 +302,22 @@ struct ShortcutsGridView: View {
                 continue
             }
 
+            let ext = url.pathExtension.lowercased()
+
             if resourceValues.isRegularFile == true {
-                if url.pathExtension.lowercased() == "lnk" {
+                // Include .lnk shortcuts
+                if ext == "lnk" {
                     results.append(url)
                 }
-            } else if resourceValues.isDirectory == true, currentDepth < maxDepth {
-                let subResults = scanForLnkFiles(in: url, maxDepth: maxDepth, currentDepth: currentDepth + 1)
-                results.append(contentsOf: subResults)
+            } else if resourceValues.isDirectory == true {
+                // Include .app bundles (PodoJuice) - don't recurse into them
+                if ext == "app" {
+                    results.append(url)
+                } else if currentDepth < maxDepth {
+                    // Recurse into regular directories
+                    let subResults = scanForLnkFiles(in: url, maxDepth: maxDepth, currentDepth: currentDepth + 1)
+                    results.append(contentsOf: subResults)
+                }
             }
         }
 
