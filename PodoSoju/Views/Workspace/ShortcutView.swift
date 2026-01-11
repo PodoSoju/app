@@ -122,6 +122,13 @@ struct ShortcutView: View {
 
     // MARK: - Actions
     private func runProgram() {
+        // .app 파일은 직접 실행 (PodoJuice)
+        if shortcut.url.pathExtension.lowercased() == "app" {
+            Logger.podoSojuKit.info("Opening PodoJuice app: \(shortcut.name)")
+            NSWorkspace.shared.open(shortcut.url)
+            return
+        }
+
         Task {
             // .lnk 파일이면 실제 exe 경로 추출
             let exeName: String
@@ -208,10 +215,7 @@ struct ShortcutView: View {
                     }
                 }
                 Logger.podoSojuKit.warning("No window after 60s: \(shortcut.name)")
-                await MainActor.run {
-                    errorMessage = "프로그램이 60초 내에 창을 열지 않았습니다.\n크래시했거나 백그라운드에서 실행 중일 수 있습니다.\n\nCmd+Option+L로 로그를 확인하세요."
-                    showError = true
-                }
+                // 알럿 제거 - 백그라운드 실행 프로그램도 있으므로 경고만 로깅
             } catch {
                 await MainActor.run {
                     errorMessage = error.localizedDescription
@@ -229,53 +233,92 @@ struct ShortcutView: View {
 
     // 대기 중인 프로그램 추적 (static으로 공유)
     private static var pendingLaunches: Set<URL> = []
+    // Stable window detection - require consecutive detections
+    private static var windowStableCounts: [URL: Int] = [:]
+    private static let requiredStableCount = 3  // 3 consecutive detections (3초)
 
     /// 내 프로그램의 창이 열렸는지 확인
+    /// - Parameters:
+    ///   - programURL: 프로그램 URL
+    ///   - launchTime: 실행 시작 시간 (이 시간 이후 생성된 파일만 확인)
+    /// - Returns: (found: 창 발견됨, shouldStop: 대기 중단해야 함)
     private func checkMyWindowOpened(programURL: URL, launchTime: Date) -> (found: Bool, shouldStop: Bool) {
-        let programName = programURL.deletingPathExtension().lastPathComponent.lowercased()
         let exeName = programURL.lastPathComponent
 
-        // 1. .soju/running/ 파일로 확인 (가장 정확)
-        let runningApps = workspace.getRunningWineApps()
-        if runningApps.contains(where: { $0.exe.lowercased() == exeName.lowercased() }) {
-            Logger.podoSojuKit.debug("Found running app via .soju/running: \(exeName)", category: "ShortcutView")
-            return (true, false)
+        // 1. .soju/running/ 디렉토리에서 새로 생성된 JSON 파일 확인 (가장 정확)
+        let runningDir = workspace.winePrefixURL.appendingPathComponent(".soju/running")
+        let fileManager = FileManager.default
+
+        if fileManager.fileExists(atPath: runningDir.path) {
+            do {
+                let files = try fileManager.contentsOfDirectory(at: runningDir, includingPropertiesForKeys: [.creationDateKey])
+                for file in files where file.pathExtension == "json" {
+                    // 파일 생성 시간 확인 - launchTime 이후 생성된 파일만
+                    if let attributes = try? fileManager.attributesOfItem(atPath: file.path),
+                       let creationDate = attributes[.creationDate] as? Date,
+                       creationDate >= launchTime {
+                        // JSON 파일 내용 확인
+                        if let data = try? Data(contentsOf: file),
+                           let app = try? JSONDecoder().decode(Workspace.RunningWineApp.self, from: data),
+                           app.exe.lowercased() == exeName.lowercased() {
+                            Logger.podoSojuKit.debug("Found running app via .soju/running (created after launch): \(exeName)", category: "ShortcutView")
+                            return (true, false)
+                        }
+                    }
+                }
+            } catch {
+                Logger.podoSojuKit.warning("Failed to read .soju/running directory: \(error.localizedDescription)", category: "ShortcutView")
+            }
         }
 
         // 2. pgrep으로 프로세스 실행 중인지 확인
         let isRunning = SojuManager.shared.isProcessRunning(exeName: exeName)
+        let runningApps = workspace.getRunningWineApps()
 
         if !isRunning && runningApps.isEmpty {
             // 프로세스가 종료됨 (설치 완료 등)
             return (false, true)
         }
 
-        // 3. Wine 창 목록에서 내 프로그램 찾기 (fallback)
+        // 3. Wine 창 목록에서 내 프로그램 찾기 (stable detection - 연속 감지 필요)
+        let programName = programURL.deletingPathExtension().lastPathComponent.lowercased()
         guard let windowList = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else {
+            Self.windowStableCounts[programURL] = 0
             return (false, false)
         }
 
+        var foundWindow = false
         for window in windowList {
             guard let ownerName = window[kCGWindowOwnerName as String] as? String else {
                 continue
             }
 
             if ownerName.lowercased().contains("wine") {
-                let windowName = window[kCGWindowName as String] as? String ?? ""
-                let windowNameLower = windowName.lowercased()
-
-                // 창 제목이 프로그램 이름을 포함하면 내 프로그램
-                if !windowNameLower.isEmpty && windowNameLower.contains(programName) {
-                    Logger.podoSojuKit.debug("Found my window: '\(windowName)' matches '\(programName)'", category: "ShortcutView")
-                    return (true, false)
-                }
-
-                // 창 제목이 비어있으면 (권한 문제) - 대기 중인 프로그램이 하나뿐이면 OK
-                if windowNameLower.isEmpty && Self.pendingLaunches.count == 1 {
-                    Logger.podoSojuKit.debug("Found Wine window with empty title, assuming mine (only 1 pending)", category: "ShortcutView")
-                    return (true, false)
+                // Check if window has actual size and is fully opaque
+                if let bounds = window[kCGWindowBounds as String] as? [String: CGFloat],
+                   let width = bounds["Width"], let height = bounds["Height"],
+                   width > 100 && height > 100 {
+                    let alpha = window[kCGWindowAlpha as String] as? CGFloat ?? 0
+                    if alpha >= 1.0 {
+                        foundWindow = true
+                        break
+                    }
                 }
             }
+        }
+
+        if foundWindow {
+            let count = (Self.windowStableCounts[programURL] ?? 0) + 1
+            Self.windowStableCounts[programURL] = count
+
+            if count >= Self.requiredStableCount {
+                Logger.podoSojuKit.debug("Wine window stable for \(count) checks: \(programName)", category: "ShortcutView")
+                Self.windowStableCounts.removeValue(forKey: programURL)
+                return (true, false)
+            }
+            Logger.podoSojuKit.debug("Wine window found, stable count: \(count)/\(Self.requiredStableCount)", category: "ShortcutView")
+        } else {
+            Self.windowStableCounts[programURL] = 0
         }
 
         return (false, false)

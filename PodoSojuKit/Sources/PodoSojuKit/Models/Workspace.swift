@@ -227,6 +227,7 @@ public final class Workspace: ObservableObject, Equatable, Hashable, Identifiabl
     /// - Parameter url: Program URL
     /// - Returns: true if window was focused, false if not found
     @MainActor
+    @discardableResult
     public func focusRunningProgram(_ url: URL) -> Bool {
         // 프로그램 이름 추출 (확장자 제외, 소문자)
         let programName = url.deletingPathExtension().lastPathComponent.lowercased()
