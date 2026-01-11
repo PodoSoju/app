@@ -329,8 +329,13 @@ public final class SojuManager: @unchecked Sendable {
         guard !components.isEmpty else { return }
 
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/bash")
-        process.arguments = [winetricksBinary.path, "-q", "--force"] + components
+        // Use 'script' command to create a pseudo-terminal (pty)
+        // This makes wget output progress information as if connected to a terminal
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/script")
+        let winetricksCmd = ([winetricksBinary.path, "-q", "--force"] + components)
+            .map { $0.contains(" ") ? "'\($0)'" : $0 }
+            .joined(separator: " ")
+        process.arguments = ["-q", "/dev/null", "/bin/bash", "-c", winetricksCmd]
         process.currentDirectoryURL = workspace.url
 
         // winetricks용 환경변수 설정
@@ -402,8 +407,11 @@ public final class SojuManager: @unchecked Sendable {
         }
 
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/bash")
-        process.arguments = [winetricksBinary.path, "-q", "--force", component]
+        // Use 'script' command to create a pseudo-terminal (pty)
+        // This makes wget output progress information as if connected to a terminal
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/script")
+        let winetricksCmd = "\(winetricksBinary.path) -q --force \(component)"
+        process.arguments = ["-q", "/dev/null", "/bin/bash", "-c", winetricksCmd]
         process.currentDirectoryURL = workspace.url
 
         // winetricks용 환경변수 설정
@@ -415,7 +423,7 @@ public final class SojuManager: @unchecked Sendable {
         process.environment = env
         process.qualityOfService = .userInitiated
 
-        Logger.podoSojuKit.info("🔧 Running winetricks: \(component)", category: "Soju")
+        Logger.podoSojuKit.info("🔧 Running winetricks (with pty): \(component)", category: "Soju")
 
         // 상태 추적 변수
         let startTime = Date()
@@ -446,12 +454,22 @@ public final class SojuManager: @unchecked Sendable {
                     }
                 }
 
-                // wget 진행률 파싱: "50K .......... 45% 2.5M" 패턴
+                // 1. "Downloading" 문자열 감지 -> downloading 상태
+                // wget은 tty가 아니면 진행률을 출력하지 않으므로, winetricks 출력으로 감지
+                if message.contains("Downloading") || message.lowercased().contains("download") {
+                    if !isDownloading {
+                        isDownloading = true
+                        Logger.podoSojuKit.info("winetricks \(component): downloading...", category: "Soju")
+                        onProgress(.downloading(percent: -1))  // -1은 "진행률 모름" 의미
+                    }
+                }
+
+                // 2. wget 진행률 파싱: "50K .......... 45% 2.5M" 패턴 (tty일 때만 동작)
                 // 정규식: 숫자 + % 형식
                 if let range = message.range(of: #"\d+%"#, options: .regularExpression) {
                     let percentStr = message[range].dropLast() // % 제거
                     if let percent = Int(percentStr) {
-                        // 2. 다운로드 시작 로깅 (처음 감지 시)
+                        // 다운로드 상태 업데이트 (% 포함)
                         if !isDownloading {
                             isDownloading = true
                             Logger.podoSojuKit.info("winetricks \(component): downloading started", category: "Soju")
@@ -467,13 +485,13 @@ public final class SojuManager: @unchecked Sendable {
                     }
                 }
 
-                // "Executing wine" 또는 "Running wine" 감지 -> installing
-                if message.contains("Executing wine") || message.contains("Running wine") ||
-                   message.contains("Executing ") && message.contains(component) {
-                    // 2. 설치 시작 로깅 (처음 감지 시)
+                // 3. "Executing wine" 또는 "Running" 감지 -> installing 상태
+                if message.contains("Executing wine") || message.contains("Executing /") ||
+                   message.contains("Running") {
+                    // 설치 시작 로깅 (처음 감지 시)
                     if !isInstalling {
                         isInstalling = true
-                        Logger.podoSojuKit.info("winetricks \(component): installing started", category: "Soju")
+                        Logger.podoSojuKit.info("winetricks \(component): installing...", category: "Soju")
                     }
                     onProgress(.installing)
                 }

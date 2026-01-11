@@ -334,10 +334,16 @@ struct WinetricksComponentRow: View {
                 ProgressView()
                     .scaleEffect(0.7)
                     .frame(width: 14, height: 14)
-                Text("Downloading \(percent)%")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .monospacedDigit()
+                if percent < 0 {
+                    Text("Downloading...")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                } else {
+                    Text("Downloading \(percent)%")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .monospacedDigit()
+                }
             }
             .frame(minWidth: 120, alignment: .trailing)
 
