@@ -15,7 +15,7 @@ import AppKit
 /// - Soju 바이너리 경로 관리
 /// - 환경 변수 설정 (WINEPREFIX, DXVK 등)
 /// - 프로세스 실행 관리
-public final class SojuManager: @unchecked Sendable {
+public final class SojuManager: ObservableObject, @unchecked Sendable {
     // MARK: - Singleton
 
     public static let shared = SojuManager()
@@ -45,7 +45,7 @@ public final class SojuManager: @unchecked Sendable {
     public let winetricksBinary: URL
 
     /// Soju 버전 정보
-    public private(set) var version: SojuVersion?
+    @Published public private(set) var version: SojuVersion?
 
     // MARK: - Initialization
 
@@ -110,6 +110,13 @@ public final class SojuManager: @unchecked Sendable {
             Logger.podoSojuKit.error("Failed to load Soju version: \(error)")
             return nil
         }
+    }
+
+    /// 버전 정보 리로드 (설치 후 호출)
+    @MainActor
+    public func reloadVersion() {
+        self.version = loadVersion()
+        Logger.podoSojuKit.info("Version reloaded: \(version?.versionString ?? "nil")", category: "Soju")
     }
 
     // MARK: - Installation Check

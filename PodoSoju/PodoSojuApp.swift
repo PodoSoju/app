@@ -9,6 +9,31 @@ import SwiftUI
 import PodoSojuKit
 import os.log
 
+// MARK: - App Version
+
+/// Bundle에서 앱 버전 정보 읽기
+enum AppVersion {
+    /// 앱 버전 (CFBundleShortVersionString)
+    static var version: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+    }
+
+    /// 빌드 번호 (CFBundleVersion)
+    static var build: String {
+        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+    }
+
+    /// 전체 버전 문자열 (예: "1.0.0 (1)")
+    static var full: String {
+        "\(version) (\(build))"
+    }
+
+    /// 타이틀용 버전 문자열 (예: "v1.0.0")
+    static var titleString: String {
+        "v\(version)"
+    }
+}
+
 @main
 struct PodoSojuApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
@@ -17,7 +42,7 @@ struct PodoSojuApp: App {
 
     init() {
         // Log app launch to file
-        Logger.podoSojuKit.info("🍇 PodoSoju app launched")
+        Logger.podoSojuKit.info("🍇 PodoSoju \(AppVersion.full) launched")
         Logger.podoSojuKit.info("📋 Log file location: \(Logger.logFileURL.path)")
     }
 
@@ -31,6 +56,7 @@ struct PodoSojuApp: App {
                 .sheet(isPresented: $showSettings) {
                     SettingsView()
                 }
+                .navigationTitle("PodoSoju \(AppVersion.titleString)")
         }
         // URL scheme 호출 시 새 창 열지 않음 (AppDelegate에서 처리)
         .handlesExternalEvents(matching: [])

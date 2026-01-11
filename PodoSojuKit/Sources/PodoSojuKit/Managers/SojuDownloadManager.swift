@@ -83,6 +83,7 @@ public final class SojuDownloadManager: ObservableObject {
     @Published public private(set) var downloadProgress: Double = 0
     @Published public private(set) var currentVersion: String?
     @Published public private(set) var latestRelease: GitHubRelease?
+    @Published public private(set) var allReleases: [GitHubRelease] = []
 
     // MARK: - Private Properties
 
@@ -164,6 +165,7 @@ public final class SojuDownloadManager: ObservableObject {
 
         // 완료
         currentVersion = release.version
+        await SojuManager.shared.reloadVersion()
         state = .completed
         Logger.podoSojuKit.info("Soju \(release.version) installed successfully", category: "Download")
     }
@@ -184,11 +186,60 @@ public final class SojuDownloadManager: ObservableObject {
         return SojuManager.shared.isInstalled
     }
 
+    /// 모든 릴리즈 가져오기
+    public func fetchAllReleases() async throws {
+        state = .checking
+
+        do {
+            let releases = try await fetchReleases()
+            allReleases = releases
+            if let first = releases.first {
+                latestRelease = first
+            }
+            state = .idle
+            Logger.podoSojuKit.info("Fetched \(releases.count) releases", category: "Download")
+        } catch {
+            state = .failed(error)
+            throw error
+        }
+    }
+
+    /// 특정 릴리즈 다운로드 및 설치
+    public func downloadRelease(_ release: GitHubRelease) async throws {
+        // tar.gz 에셋 찾기
+        guard let asset = release.assets.first(where: {
+            $0.name.contains(assetNamePattern) && $0.name.hasSuffix(".tar.gz")
+        }) else {
+            throw DownloadError.noCompatibleAsset
+        }
+
+        guard let downloadURL = asset.downloadURL else {
+            throw DownloadError.noCompatibleAsset
+        }
+
+        Logger.podoSojuKit.info("Starting download: \(asset.name) (\(asset.formattedSize))", category: "Download")
+
+        // 다운로드 시작
+        state = .downloading(progress: 0)
+        downloadProgress = 0
+
+        let tempURL = try await downloadFile(from: downloadURL, expectedSize: asset.size)
+
+        // 압축 해제 및 설치
+        state = .extracting
+        try await extractAndInstall(tempURL, version: release.version)
+
+        // 완료
+        currentVersion = release.version
+        await SojuManager.shared.reloadVersion()
+        state = .completed
+        Logger.podoSojuKit.info("Soju \(release.version) installed successfully", category: "Download")
+    }
+
     // MARK: - Private Methods
 
-    /// GitHub API에서 최신 릴리즈 정보 가져오기 (prerelease 포함)
-    private func fetchLatestRelease() async throws -> GitHubRelease {
-        // /releases/latest는 prerelease를 제외하므로, /releases를 사용
+    /// GitHub API에서 모든 릴리즈 정보 가져오기 (prerelease 포함)
+    private func fetchReleases() async throws -> [GitHubRelease] {
         let urlString = "https://api.github.com/repos/\(githubOwner)/\(githubRepo)/releases"
         guard let url = URL(string: urlString) else {
             throw DownloadError.networkError(URLError(.badURL))
@@ -216,15 +267,18 @@ public final class SojuDownloadManager: ObservableObject {
         let releases = try decoder.decode([GitHubRelease].self, from: data)
 
         // publishedAt 기준 내림차순 정렬 (최신순)
-        let sorted = releases.sorted {
+        return releases.sorted {
             ($0.publishedAt ?? .distantPast) > ($1.publishedAt ?? .distantPast)
         }
+    }
 
-        guard let latestRelease = sorted.first else {
+    /// 최신 릴리즈 가져오기
+    private func fetchLatestRelease() async throws -> GitHubRelease {
+        let releases = try await fetchReleases()
+        guard let latest = releases.first else {
             throw DownloadError.noReleaseFound
         }
-
-        return latestRelease
+        return latest
     }
 
     /// 파일 다운로드

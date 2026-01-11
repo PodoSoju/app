@@ -19,7 +19,7 @@ struct SettingsView: View {
                     Label("Soju", systemImage: "wineglass")
                 }
         }
-        .frame(width: 500, height: 400)
+        .frame(width: 500, height: 550)
         .padding()
     }
 }
@@ -27,6 +27,12 @@ struct SettingsView: View {
 /// Soju (Wine) 관련 설정
 struct SojuSettingsView: View {
     @ObservedObject private var downloadManager = SojuDownloadManager.shared
+    @ObservedObject private var sojuManager = SojuManager.shared
+    @State private var selectedReleaseId: String?
+
+    private var installedVersion: String? {
+        sojuManager.version?.versionString
+    }
 
     var body: some View {
         Form {
@@ -34,10 +40,10 @@ struct SojuSettingsView: View {
                 HStack {
                     Text("Installed Version:")
                     Spacer()
-                    if let version = SojuManager.shared.version {
+                    if let version = sojuManager.version {
                         Text(version.versionString)
                             .foregroundStyle(.secondary)
-                    } else if SojuManager.shared.isInstalled {
+                    } else if sojuManager.isInstalled {
                         Text("Unknown")
                             .foregroundStyle(.secondary)
                     } else {
@@ -72,14 +78,56 @@ struct SojuSettingsView: View {
                 }
             }
 
+            Section("Version Selection") {
+                if downloadManager.allReleases.isEmpty {
+                    HStack {
+                        Text("Loading versions...")
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        ProgressView()
+                            .controlSize(.small)
+                    }
+                } else {
+                    Picker("Select Version", selection: $selectedReleaseId) {
+                        Text("Select a version")
+                            .tag(nil as String?)
+                        ForEach(downloadManager.allReleases) { release in
+                            Text(versionLabel(for: release))
+                                .tag(release.id as String?)
+                        }
+                    }
+                    .pickerStyle(.menu)
+
+                    if downloadManager.state.isInProgress {
+                        HStack {
+                            ProgressView()
+                                .controlSize(.small)
+                            Text("Installing...")
+                                .foregroundStyle(.secondary)
+                        }
+                    } else {
+                        Button("Install Selected Version") {
+                            installSelectedVersion()
+                        }
+                        .disabled(selectedReleaseId == nil || isSelectedVersionInstalled)
+                    }
+
+                    if isSelectedVersionInstalled {
+                        Text("This version is already installed.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
             Section("D3DMetal (Optional)") {
                 HStack {
                     Text("Status:")
                     Spacer()
-                    if SojuManager.shared.isD3DMetalInstalled {
+                    if sojuManager.isD3DMetalInstalled {
                         Text("Installed")
                             .foregroundStyle(.green)
-                    } else if SojuManager.shared.isGPTKInstalled() {
+                    } else if sojuManager.isGPTKInstalled() {
                         Text("GPTK available")
                             .foregroundStyle(.orange)
                     } else {
@@ -88,9 +136,9 @@ struct SojuSettingsView: View {
                     }
                 }
 
-                if !SojuManager.shared.isD3DMetalInstalled && SojuManager.shared.isGPTKInstalled() {
+                if !sojuManager.isD3DMetalInstalled && sojuManager.isGPTKInstalled() {
                     Button("Install D3DMetal from GPTK") {
-                        try? SojuManager.shared.installD3DMetalFromGPTK()
+                        try? sojuManager.installD3DMetalFromGPTK()
                     }
                 }
 
@@ -101,7 +149,36 @@ struct SojuSettingsView: View {
         }
         .formStyle(.grouped)
         .task {
-            try? await downloadManager.checkForUpdate()
+            try? await downloadManager.fetchAllReleases()
+        }
+    }
+
+    private var isSelectedVersionInstalled: Bool {
+        guard let selectedId = selectedReleaseId,
+              let release = downloadManager.allReleases.first(where: { $0.id == selectedId }) else {
+            return false
+        }
+        return release.version == installedVersion
+    }
+
+    private func versionLabel(for release: GitHubRelease) -> String {
+        var label = release.version
+        if release.prerelease {
+            label += " (pre)"
+        }
+        if release.version == installedVersion {
+            label += " (installed)"
+        }
+        return label
+    }
+
+    private func installSelectedVersion() {
+        guard let selectedId = selectedReleaseId,
+              let release = downloadManager.allReleases.first(where: { $0.id == selectedId }) else {
+            return
+        }
+        Task {
+            try? await downloadManager.downloadRelease(release)
         }
     }
 }

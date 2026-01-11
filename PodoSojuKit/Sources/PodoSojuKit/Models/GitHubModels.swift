@@ -10,7 +10,8 @@ import Foundation
 // MARK: - GitHub Release
 
 /// GitHub Release 정보
-public struct GitHubRelease: Codable, Sendable {
+public struct GitHubRelease: Codable, Sendable, Identifiable {
+    public var id: String { tagName }
     public let tagName: String
     public let name: String?
     public let body: String?
