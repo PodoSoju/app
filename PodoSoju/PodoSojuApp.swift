@@ -31,13 +31,9 @@ struct PodoSojuApp: App {
                 .sheet(isPresented: $showSettings) {
                     SettingsView()
                 }
-                .onOpenURL { url in
-                    // URL은 AppDelegate에서 처리
-                    // 여기서는 새 창 열리는 것만 방지
-                }
         }
-        // URL scheme 호출 시 새 창 안 열고 기존 창 사용
-        .handlesExternalEvents(matching: Set(arrayLiteral: "main"))
+        // URL scheme 호출 시 새 창 열지 않음 (AppDelegate에서 처리)
+        .handlesExternalEvents(matching: [])
         .windowResizability(.contentSize)
         .defaultSize(width: 1280, height: 800)
         .commands {
@@ -58,7 +54,7 @@ struct PodoSojuApp: App {
             }
         }
 
-        // 로그 창 (별도 윈도우)
+        // 로그 창 (별도 윈도우) - Cmd+Option+L로 열기
         Window("Wine Logs", id: "log-window") {
             LogWindowView()
         }
@@ -71,6 +67,8 @@ struct PodoSojuApp: App {
 
 class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var shouldTerminate = false
+    private var lastHandledURL: String = ""
+    private var lastHandledTime: Date = .distantPast
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // 탭 기능 비활성화
@@ -104,6 +102,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func handlePodoSojuURL(_ url: URL) {
         guard url.scheme == "podosoju" else { return }
+
+        // 중복 호출 방지 (같은 URL이 1초 내에 다시 오면 무시)
+        let urlString = url.absoluteString
+        let now = Date()
+        if urlString == lastHandledURL && now.timeIntervalSince(lastHandledTime) < 1.0 {
+            Logger.podoSojuKit.debug("Ignoring duplicate URL: \(urlString)", category: "URLHandler")
+            return
+        }
+        lastHandledURL = urlString
+        lastHandledTime = now
 
         Logger.podoSojuKit.info("Received URL: \(url.absoluteString)", category: "URLHandler")
 
