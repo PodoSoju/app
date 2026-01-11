@@ -441,6 +441,8 @@ struct AddProgramView: View {
     }
 }
 
+#if DEBUG
 #Preview {
     AddProgramView(workspace: Workspace.preview)
 }
+#endif

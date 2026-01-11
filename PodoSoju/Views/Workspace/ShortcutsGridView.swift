@@ -26,7 +26,7 @@ struct ShortcutsGridView: View {
     private let gridLayout = [GridItem(.adaptive(minimum: 100, maximum: .infinity))]
 
     var body: some View {
-        ZStack(alignment: .bottomTrailing) {
+        ZStack {
             ScrollView {
                 LazyVGrid(columns: gridLayout, alignment: .center, spacing: 20) {
                     ForEach(shortcuts) { shortcut in
@@ -37,38 +37,75 @@ struct ShortcutsGridView: View {
             }
             .background(desktopBackground)
 
-            // Bottom-right buttons (home, settings, +)
-            HStack(spacing: 12) {
-                // Home button (워크스페이스 선택 화면으로)
-                if let onHome = onHome {
-                    Button(action: onHome) {
-                        Image(systemName: "house.fill")
-                            .font(.system(size: 36))
-                            .foregroundColor(.white.opacity(0.8))
-                    }
-                    .buttonStyle(.plain)
+            // Bottom-left: Windows version
+            VStack {
+                Spacer()
+                HStack {
+                    Text(workspace.settings.windowsVersion.pretty())
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.white.opacity(0.6))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.black.opacity(0.3))
+                        .cornerRadius(4)
+                    Spacer()
                 }
-
-                // Settings button (워크스페이스 설정)
-                Button(action: {
-                    Logger.podoSojuKit.info("Settings button clicked for: \(workspace.settings.name)")
-                    showWorkspaceSettings = true
-                }) {
-                    Image(systemName: "gearshape.fill")
-                        .font(.system(size: 36))
-                        .foregroundColor(.white.opacity(0.8))
-                }
-                .buttonStyle(.plain)
-
-                // + button
-                Button(action: { showAddProgram = true }) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 44))
-                        .foregroundColor(.accentColor)
-                }
-                .buttonStyle(.plain)
+                .padding(12)
             }
-            .padding(20)
+
+            // Bottom-right buttons (home, settings, +)
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    HStack(spacing: 12) {
+                        // Home button (워크스페이스 선택 화면으로)
+                        if let onHome = onHome {
+                            Button(action: onHome) {
+                                ZStack {
+                                    Circle()
+                                        .fill(Color.black.opacity(0.4))
+                                        .frame(width: 44, height: 44)
+                                    Image(systemName: "house.fill")
+                                        .font(.system(size: 20, weight: .semibold))
+                                        .foregroundColor(.white.opacity(0.8))
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+
+                        // Settings button (워크스페이스 설정)
+                        Button(action: {
+                            Logger.podoSojuKit.info("Settings button clicked for: \(workspace.settings.name)")
+                            showWorkspaceSettings = true
+                        }) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.black.opacity(0.4))
+                                    .frame(width: 44, height: 44)
+                                Image(systemName: "gearshape.fill")
+                                    .font(.system(size: 20, weight: .semibold))
+                                    .foregroundColor(.white.opacity(0.8))
+                            }
+                        }
+                        .buttonStyle(.plain)
+
+                        // + button
+                        Button(action: { showAddProgram = true }) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.black.opacity(0.4))
+                                    .frame(width: 44, height: 44)
+                                Image(systemName: "plus")
+                                    .font(.system(size: 20, weight: .semibold))
+                                    .foregroundColor(.accentColor)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(20)
+                }
+            }
         }
         .onAppear {
             loadShortcuts()
@@ -401,6 +438,8 @@ struct ShortcutsGridView: View {
     }
 }
 
+#if DEBUG
 #Preview {
     ShortcutsGridView(workspace: Workspace.preview)
 }
+#endif

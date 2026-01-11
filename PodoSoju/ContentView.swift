@@ -250,15 +250,15 @@ struct ContentView: View {
                 ZStack {
                     Circle()
                         .fill(Color.gray.opacity(0.6))
-                        .frame(width: 36, height: 36)
+                        .frame(width: 44, height: 44)
 
                     if isCleaningZombies {
                         ProgressView()
                             .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                            .scaleEffect(0.7)
+                            .scaleEffect(0.8)
                     } else {
                         Image(systemName: "trash.fill")
-                            .font(.system(size: 18))
+                            .font(.system(size: 20, weight: .semibold))
                             .foregroundColor(.white)
                     }
                 }
@@ -269,17 +269,27 @@ struct ContentView: View {
 
                 // Settings button (전체 설정)
                 Button(action: { showSettings = true }) {
-                    Image(systemName: "gearshape.fill")
-                        .font(.system(size: 36))
-                        .foregroundColor(.secondary)
+                    ZStack {
+                        Circle()
+                            .fill(Color.primary.opacity(0.1))
+                            .frame(width: 44, height: 44)
+                        Image(systemName: "gearshape.fill")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(.secondary)
+                    }
                 }
                 .buttonStyle(.plain)
 
                 // + Button (새 워크스페이스)
                 Button(action: { showCreateWorkspace = true }) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 44))
-                        .foregroundColor(.accentColor)
+                    ZStack {
+                        Circle()
+                            .fill(Color.primary.opacity(0.1))
+                            .frame(width: 44, height: 44)
+                        Image(systemName: "plus")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(.accentColor)
+                    }
                 }
                 .buttonStyle(.plain)
             }

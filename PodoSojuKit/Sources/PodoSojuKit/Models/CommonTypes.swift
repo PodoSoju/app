@@ -27,6 +27,24 @@ public enum WinVersion: String, CaseIterable, Codable, Sendable {
         case .win11: return "Windows 11"
         }
     }
+
+    /// Registry values for Windows version
+    public var registryValues: (majorVersion: Int, minorVersion: Int, build: String, productName: String, csdVersion: String) {
+        switch self {
+        case .winXP:
+            return (5, 2, "3790", "Windows XP", "Service Pack 2")
+        case .win7:
+            return (6, 1, "7601", "Windows 7", "Service Pack 1")
+        case .win8:
+            return (6, 2, "9200", "Windows 8", "")
+        case .win81:
+            return (6, 3, "9600", "Windows 8.1", "")
+        case .win10:
+            return (10, 0, "19041", "Windows 10", "")
+        case .win11:
+            return (10, 0, "22000", "Windows 11", "")
+        }
+    }
 }
 
 // MARK: - Enhanced Sync

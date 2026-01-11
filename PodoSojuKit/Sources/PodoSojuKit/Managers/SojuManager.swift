@@ -332,6 +332,54 @@ public final class SojuManager: ObservableObject, @unchecked Sendable {
         throw SojuError.winebootFailed(-1)
     }
 
+    /// Windows 버전을 WINEPREFIX 레지스트리에 적용
+    /// - Parameters:
+    ///   - version: 적용할 Windows 버전
+    ///   - workspace: 대상 Workspace
+    public func applyWindowsVersion(_ version: WinVersion, to workspace: Workspace) async throws {
+        try validate()
+
+        Logger.podoSojuKit.info("Applying Windows version: \(version.pretty()) to \(workspace.winePrefixPath)")
+
+        let regValues = version.registryValues
+
+        // Both 64-bit and 32-bit (Wow6432Node) registry keys
+        let regKeys = [
+            "HKLM\\Software\\Microsoft\\Windows NT\\CurrentVersion",
+            "HKLM\\Software\\Wow6432Node\\Microsoft\\Windows NT\\CurrentVersion"
+        ]
+
+        // Registry commands to set Windows version
+        let commands: [(key: String, value: String, type: String)] = [
+            ("CurrentMajorVersionNumber", "\(regValues.majorVersion)", "REG_DWORD"),
+            ("CurrentMinorVersionNumber", "\(regValues.minorVersion)", "REG_DWORD"),
+            ("CurrentBuild", regValues.build, "REG_SZ"),
+            ("CurrentBuildNumber", regValues.build, "REG_SZ"),
+            ("ProductName", regValues.productName, "REG_SZ"),
+            ("CSDVersion", regValues.csdVersion, "REG_SZ"),
+            ("CurrentVersion", "\(regValues.majorVersion).\(regValues.minorVersion)", "REG_SZ")
+        ]
+
+        let env = constructEnvironment(for: workspace)
+
+        for regKey in regKeys {
+            for cmd in commands {
+                let process = Process()
+                process.executableURL = wineBinary
+                process.arguments = ["reg", "add", regKey, "/v", cmd.key, "/t", cmd.type, "/d", cmd.value, "/f"]
+                process.environment = env
+                process.currentDirectoryURL = workspace.url
+                process.standardOutput = nil
+                process.standardError = nil
+
+                try process.run()
+                process.waitUntilExit()
+            }
+        }
+
+        Logger.podoSojuKit.info("Windows version applied: \(version.pretty())")
+    }
+
     /// wineserver 실행
     /// - Parameters:
     ///   - args: wineserver 인자 (예: ["-k"] for kill)

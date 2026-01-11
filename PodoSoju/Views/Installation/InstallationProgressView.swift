@@ -607,6 +607,7 @@ private struct InfoRow: View {
 
 // MARK: - Preview
 
+#if DEBUG
 #Preview("Installing") {
     let workspace = Workspace.preview
     let program = Program(
@@ -614,7 +615,7 @@ private struct InfoRow: View {
         url: URL(fileURLWithPath: "/Users/test/Downloads/npp.8.6.Installer.exe")
     )
 
-    return InstallationProgressView(
+    InstallationProgressView(
         program: program,
         workspace: workspace,
         onComplete: { programs in
@@ -630,9 +631,10 @@ private struct InfoRow: View {
         url: URL(fileURLWithPath: "/Users/test/Downloads/SteamSetup.exe")
     )
 
-    return InstallationProgressView(
+    InstallationProgressView(
         program: program,
         workspace: workspace,
         onComplete: { _ in }
     )
 }
+#endif

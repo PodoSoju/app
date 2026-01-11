@@ -216,6 +216,8 @@ private struct VerbTableView: View {
     }
 }
 
+#if DEBUG
 #Preview {
     WinetricksView(workspace: Workspace.preview)
 }
+#endif

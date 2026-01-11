@@ -521,6 +521,7 @@ struct ShortcutView: View {
     }
 }
 
+#if DEBUG
 #Preview {
     ShortcutView(
         shortcut: DesktopIcon(
@@ -532,3 +533,4 @@ struct ShortcutView: View {
     )
     .frame(width: 110, height: 110)
 }
+#endif

@@ -120,7 +120,20 @@ struct WineSettingsTab: View {
             Section("Windows Compatibility") {
                 Picker("Windows Version", selection: Binding(
                     get: { workspace.settings.windowsVersion },
-                    set: { workspace.settings.windowsVersion = $0 }
+                    set: { newVersion in
+                        let oldVersion = workspace.settings.windowsVersion
+                        workspace.settings.windowsVersion = newVersion
+                        // Apply to registry if changed
+                        if oldVersion != newVersion {
+                            Task {
+                                do {
+                                    try await SojuManager.shared.applyWindowsVersion(newVersion, to: workspace)
+                                } catch {
+                                    Logger.podoSojuKit.error("Failed to apply Windows version: \(error)")
+                                }
+                            }
+                        }
+                    }
                 )) {
                     ForEach(WinVersion.allCases.reversed(), id: \.self) { version in
                         Text(version.pretty()).tag(version)
@@ -197,6 +210,8 @@ struct GraphicsSettingsTab: View {
     }
 }
 
+#if DEBUG
 #Preview {
     WorkspaceSettingsView(workspace: Workspace.preview)
 }
+#endif
