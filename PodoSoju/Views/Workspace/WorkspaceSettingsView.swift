@@ -192,20 +192,11 @@ struct GraphicsSettingsTab: View {
 
 // MARK: - Winetricks Tab
 
-/// Installation status for individual component
-enum InstallStatus: Equatable {
-    case idle
-    case downloading(percent: Int)
-    case installing
-    case success
-    case failed(String)
-}
-
 struct WinetricksTab: View {
     @ObservedObject var workspace: Workspace
 
-    /// Per-component install status
-    @State private var componentStatuses: [String: InstallStatus] = [:]
+    /// Shared install manager - persists across view lifecycle
+    @StateObject private var installManager = WinetricksInstallManager.shared
 
     private let commonComponents = [
         ("vcrun2019", "Visual C++ 2015-2022"),
@@ -226,7 +217,10 @@ struct WinetricksTab: View {
                     WinetricksComponentRow(
                         componentId: component.0,
                         componentName: component.1,
-                        status: componentStatuses[component.0] ?? .idle,
+                        status: installManager.getStatus(
+                            workspace: workspaceId,
+                            component: component.0
+                        ),
                         onInstall: { installComponent(component.0) }
                     )
                 }
@@ -235,9 +229,13 @@ struct WinetricksTab: View {
         .formStyle(.grouped)
     }
 
+    private var workspaceId: String {
+        workspace.url.lastPathComponent
+    }
+
     private func installComponent(_ componentId: String) {
         // Prevent re-installing if already in progress or succeeded
-        let currentStatus = componentStatuses[componentId] ?? .idle
+        let currentStatus = installManager.getStatus(workspace: workspaceId, component: componentId)
         switch currentStatus {
         case .downloading, .installing, .success:
             return
@@ -245,7 +243,7 @@ struct WinetricksTab: View {
             break
         }
 
-        componentStatuses[componentId] = .downloading(percent: 0)
+        installManager.setStatus(workspace: workspaceId, component: componentId, status: .downloading(percent: 0))
 
         Task {
             do {
@@ -256,19 +254,31 @@ struct WinetricksTab: View {
                     Task { @MainActor in
                         switch progress {
                         case .downloading(let percent):
-                            componentStatuses[componentId] = .downloading(percent: percent)
+                            self.installManager.setStatus(
+                                workspace: self.workspaceId,
+                                component: componentId,
+                                status: .downloading(percent: percent)
+                            )
                         case .installing:
-                            componentStatuses[componentId] = .installing
+                            self.installManager.setStatus(
+                                workspace: self.workspaceId,
+                                component: componentId,
+                                status: .installing
+                            )
                         }
                     }
                 }
 
                 await MainActor.run {
-                    componentStatuses[componentId] = .success
+                    installManager.setStatus(workspace: workspaceId, component: componentId, status: .success)
                 }
             } catch {
                 await MainActor.run {
-                    componentStatuses[componentId] = .failed(error.localizedDescription)
+                    installManager.setStatus(
+                        workspace: workspaceId,
+                        component: componentId,
+                        status: .failed(error.localizedDescription)
+                    )
                 }
             }
         }
