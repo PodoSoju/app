@@ -17,17 +17,14 @@ struct PodoSojuApp: App {
 
     init() {
         // Log app launch to file
-        Logger.sojuKit.info("🍇 PodoSoju app launched")
-        Logger.sojuKit.info("📋 Log file location: \(Logger.logFileURL.path)")
+        Logger.podoSojuKit.info("🍇 PodoSoju app launched")
+        Logger.podoSojuKit.info("📋 Log file location: \(Logger.logFileURL.path)")
     }
 
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .frame(minWidth: 800, minHeight: 600)
-                .onAppear {
-                    Logger.sojuKit.info("🪟 Main window appeared")
-                }
                 .sheet(isPresented: $showAbout) {
                     AboutView()
                 }
@@ -35,10 +32,12 @@ struct PodoSojuApp: App {
                     SettingsView()
                 }
         }
-        .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)
         .defaultSize(width: 1280, height: 800)
         .commands {
+            // Cmd+N, Cmd+T 비활성화
+            CommandGroup(replacing: .newItem) { }
+
             CommandGroup(replacing: .appInfo) {
                 Button("About PodoSoju") {
                     showAbout = true
@@ -61,6 +60,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var shouldTerminate = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // 탭 기능 비활성화
+        NSWindow.allowsAutomaticWindowTabbing = false
+
         // 메인 윈도우에 delegate 설정
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             if let window = NSApp.windows.first {
@@ -98,13 +100,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             let response = alert.runModal()
             if response == .alertFirstButtonReturn {
                 // 종료 선택 → Wine 종료 후 창 닫기 허용
-                Logger.sojuKit.info("User confirmed Wine process termination (window close)")
+                Logger.podoSojuKit.info("User confirmed Wine process termination (window close)")
                 SojuManager.shared.killAllWineProcesses()
                 shouldTerminate = true
                 return true  // 창 닫기 허용
             } else {
                 // 취소 → 창 닫기 거부
-                Logger.sojuKit.info("User cancelled window close")
+                Logger.podoSojuKit.info("User cancelled window close")
                 return false  // 창 닫기 거부
             }
         }
@@ -132,11 +134,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
             let response = alert.runModal()
             if response == .alertFirstButtonReturn {
-                Logger.sojuKit.info("User confirmed Wine process termination")
+                Logger.podoSojuKit.info("User confirmed Wine process termination")
                 SojuManager.shared.killAllWineProcesses()
                 return .terminateNow
             } else {
-                Logger.sojuKit.info("User cancelled app termination")
+                Logger.podoSojuKit.info("User cancelled app termination")
                 return .terminateCancel
             }
         }
@@ -145,7 +147,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        Logger.sojuKit.info("👋 PodoSoju app terminated")
+        // 탭 복원을 위해 isTerminating 설정 (onDisappear에서 remove 방지)
+        MainActor.assumeIsolated {
+            OpenWorkspacesStore.shared.isTerminating = true
+            OpenWorkspacesStore.shared.persist()
+        }
+        Logger.podoSojuKit.info("👋 PodoSoju app terminated")
     }
 
     /// Wine 프로세스 개수 확인
@@ -168,7 +175,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 return lines.count
             }
         } catch {
-            Logger.sojuKit.error("Failed to count Wine processes: \(error)")
+            Logger.podoSojuKit.error("Failed to count Wine processes: \(error)")
         }
 
         return 0

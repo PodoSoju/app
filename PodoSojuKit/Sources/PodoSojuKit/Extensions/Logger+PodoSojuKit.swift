@@ -1,6 +1,6 @@
 //
-//  Logger+SojuKit.swift
-//  SojuKit
+//  Logger+PodoSojuKit.swift
+//  PodoSojuKit
 //
 //  Created on 2026-01-07.
 //
@@ -75,10 +75,10 @@ public class LogConfig: ObservableObject {
 // MARK: - Logger Extension
 
 extension Logger {
-    /// Logger for SojuKit framework
-    public static let sojuKit = Logger(
+    /// Logger for PodoSojuKit framework
+    public static let podoSojuKit = Logger(
         subsystem: "com.podosoju.app",
-        category: "SojuKit"
+        category: "PodoSojuKit"
     )
 
     // MARK: - File Logging

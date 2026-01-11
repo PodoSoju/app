@@ -59,6 +59,72 @@ public final class Workspace: ObservableObject, Equatable, Hashable, Identifiabl
         return url.appending(path: "Programs")
     }
 
+    /// Public Desktop URL
+    public var publicDesktopURL: URL {
+        return winePrefixURL.appending(path: "users/Public/Desktop")
+    }
+
+    /// App count (counts .lnk files from Desktop + Start Menu, matching ShortcutsGridView)
+    public var desktopShortcutCount: Int {
+        let fileManager = FileManager.default
+        var seenNames = Set<String>()
+
+        // Same paths as ShortcutsGridView
+        var allPaths = [
+            winePrefixURL.appending(path: "users/Public/Desktop"),
+            winePrefixURL.appending(path: "ProgramData/Microsoft/Windows/Start Menu/Programs")
+        ]
+
+        // Add per-user Desktop folders
+        let usersDir = winePrefixURL.appending(path: "users")
+        if let userDirs = try? fileManager.contentsOfDirectory(at: usersDir, includingPropertiesForKeys: nil) {
+            for userDir in userDirs {
+                let username = userDir.lastPathComponent
+                if username != "Public" && username != "crossover" {
+                    allPaths.append(usersDir.appending(path: "\(username)/Desktop"))
+                }
+            }
+        }
+
+        for path in allPaths {
+            // Skip symlinks
+            if let attrs = try? fileManager.attributesOfItem(atPath: path.path),
+               let fileType = attrs[.type] as? FileAttributeType,
+               fileType == .typeSymbolicLink {
+                continue
+            }
+            countLnkFiles(in: path, maxDepth: 3, seenNames: &seenNames)
+        }
+
+        return seenNames.count
+    }
+
+    /// Recursively count .lnk files (excluding uninstallers)
+    private func countLnkFiles(in directory: URL, maxDepth: Int, currentDepth: Int = 0, seenNames: inout Set<String>) {
+        guard currentDepth <= maxDepth else { return }
+        let fileManager = FileManager.default
+
+        guard let contents = try? fileManager.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        ) else { return }
+
+        for item in contents {
+            var isDir: ObjCBool = false
+            fileManager.fileExists(atPath: item.path, isDirectory: &isDir)
+
+            if isDir.boolValue {
+                countLnkFiles(in: item, maxDepth: maxDepth, currentDepth: currentDepth + 1, seenNames: &seenNames)
+            } else if item.pathExtension.lowercased() == "lnk" {
+                let name = item.deletingPathExtension().lastPathComponent.lowercased()
+                if !name.contains("uninstall") && !name.contains("제거") && !name.contains("삭제") {
+                    seenNames.insert(name)
+                }
+            }
+        }
+    }
+
     // MARK: - Initialization
 
     public init(workspaceUrl: URL, isRunning: Bool = false, isAvailable: Bool = false) {
@@ -98,6 +164,9 @@ public final class Workspace: ObservableObject, Equatable, Hashable, Identifiabl
     public func wineEnvironment() -> [String: String] {
         var env = ProcessInfo.processInfo.environment
         env["WINEPREFIX"] = winePrefixPath
+
+        // Add workspace ID for window tabbing (URL's last component is UUID)
+        env["SOJU_WORKSPACE_ID"] = url.lastPathComponent
 
         // Add workspace-specific environment variables
         settings.environmentVariables(wineEnv: &env)
@@ -376,6 +445,9 @@ public final class Workspace: ObservableObject, Equatable, Hashable, Identifiabl
                 category: "Workspace"
             )
 
+            // Create Desktop shortcut (symlink)
+            try createDesktopShortcut(for: destinationURL)
+
             return destinationURL
         } catch {
             Logger.podoSojuKit.error(
@@ -384,6 +456,31 @@ public final class Workspace: ObservableObject, Equatable, Hashable, Identifiabl
             )
             throw PortableProgramError.copyFailed(sourceURL, error)
         }
+    }
+
+    /// Create a Desktop shortcut for the given program
+    public func createDesktopShortcut(for programURL: URL) throws {
+        let fileManager = FileManager.default
+
+        // Create Desktop folder if needed
+        if !fileManager.fileExists(atPath: publicDesktopURL.path) {
+            try fileManager.createDirectory(at: publicDesktopURL, withIntermediateDirectories: true)
+        }
+
+        // Create symlink on Desktop
+        let shortcutName = programURL.deletingPathExtension().lastPathComponent + ".exe"
+        let shortcutURL = publicDesktopURL.appending(path: shortcutName)
+
+        // Remove existing shortcut if present
+        if fileManager.fileExists(atPath: shortcutURL.path) {
+            try fileManager.removeItem(at: shortcutURL)
+        }
+
+        try fileManager.createSymbolicLink(at: shortcutURL, withDestinationURL: programURL)
+        Logger.podoSojuKit.info(
+            "Created Desktop shortcut: \(shortcutURL.lastPathComponent)",
+            category: "Workspace"
+        )
     }
 
     // MARK: - Stale Program Cleanup
@@ -529,6 +626,10 @@ public class Program: Identifiable, Hashable, ObservableObject, @unchecked Senda
                         Logger.podoSojuKit.warning("📎 Shortcut target not found, using lnk directly", category: category)
                         wineArgs = ["start", "/unix", self.url.path(percentEncoded: false)]
                     }
+                } else if fileExtension == "msi" {
+                    // MSI files require msiexec /i
+                    Logger.podoSojuKit.info("📦 Running MSI installer via msiexec", category: category)
+                    wineArgs = ["msiexec", "/i", self.url.path(percentEncoded: false)]
                 } else {
                     // For .exe files, use 'wine start /unix' to handle Unix paths
                     wineArgs = ["start", "/unix", self.url.path(percentEncoded: false)]

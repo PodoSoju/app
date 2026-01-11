@@ -1,12 +1,12 @@
 //
 //  InstallerDetectorTests.swift
-//  SojuKitTests
+//  PodoSojuKitTests
 //
 //  Created on 2026-01-08.
 //
 
 import XCTest
-@testable import PodoSojuKit
+@testable import PodoPodoSojuKit
 
 final class InstallerDetectorTests: XCTestCase {
 

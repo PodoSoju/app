@@ -15,7 +15,7 @@ public struct ParsedShortcut {
 
 /// Parses Windows .lnk (shortcut) files to extract target executable paths
 public struct ShortcutParser {
-    private static let logger = Logger.sojuKit
+    private static let logger = Logger.podoSojuKit
 
     // LNK file signature
     private static let lnkSignature: [UInt8] = [0x4C, 0x00, 0x00, 0x00]

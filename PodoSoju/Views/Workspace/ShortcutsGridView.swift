@@ -13,8 +13,12 @@ import UniformTypeIdentifiers
 /// Grid-based shortcuts view with auto-sorting and file drop support
 struct ShortcutsGridView: View {
     @ObservedObject var workspace: Workspace
+    var onHome: (() -> Void)? = nil
+
     @State private var shortcuts: [DesktopIcon] = []
     @State private var showAddProgram = false
+    @State private var showWorkspaceSettings = false
+    @State private var desktopWatcher = DesktopWatcher()
 
     /// Timer for periodic cleanup of stale running program entries
     private let cleanupTimer = Timer.publish(every: 5.0, on: .main, in: .common).autoconnect()
@@ -33,26 +37,49 @@ struct ShortcutsGridView: View {
             }
             .background(desktopBackground)
 
-            // + button (bottom-right)
-            Button(action: { showAddProgram = true }) {
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 44))
-                    .foregroundColor(.accentColor)
+            // Bottom-right buttons (home, settings, +)
+            HStack(spacing: 12) {
+                // Home button (워크스페이스 선택 화면으로)
+                if let onHome = onHome {
+                    Button(action: onHome) {
+                        Image(systemName: "house.fill")
+                            .font(.system(size: 36))
+                            .foregroundColor(.white.opacity(0.8))
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                // Settings button (워크스페이스 설정)
+                Button(action: {
+                    Logger.podoSojuKit.info("Settings button clicked for: \(workspace.settings.name)")
+                    showWorkspaceSettings = true
+                }) {
+                    Image(systemName: "gearshape.fill")
+                        .font(.system(size: 36))
+                        .foregroundColor(.white.opacity(0.8))
+                }
+                .buttonStyle(.plain)
+
+                // + button
+                Button(action: { showAddProgram = true }) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 44))
+                        .foregroundColor(.accentColor)
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
             .padding(20)
-            .sheet(isPresented: $showAddProgram, onDismiss: {
-                // Reload shortcuts when AddProgramView is dismissed
-                Logger.sojuKit.debug("AddProgramView dismissed, reloading shortcuts", category: "UI")
-                loadShortcuts()
-            }) {
-                AddProgramView(workspace: workspace)
-            }
         }
-        .onAppear { loadShortcuts() }
+        .onAppear {
+            loadShortcuts()
+            desktopWatcher.startWatching(prefixURL: workspace.winePrefixURL)
+        }
+        .onDisappear {
+            desktopWatcher.stopWatching()
+        }
         .onChange(of: workspace.settings.pinnedPrograms) { _, _ in
             // Reload when pinnedPrograms changes
-            Logger.sojuKit.debug("pinnedPrograms changed, reloading shortcuts", category: "UI")
+            Logger.podoSojuKit.debug("pinnedPrograms changed, reloading shortcuts", category: "UI")
             loadShortcuts()
         }
         .onDrop(of: [.fileURL], isTargeted: nil) { providers in
@@ -61,6 +88,21 @@ struct ShortcutsGridView: View {
         .onReceive(cleanupTimer) { _ in
             // Periodically clean up stale running program entries
             workspace.cleanupStaleRunningPrograms()
+        }
+        .onReceive(desktopWatcher.desktopChanged) { _ in
+            // Reload shortcuts when desktop contents change
+            Logger.podoSojuKit.debug("Desktop changed, reloading shortcuts", category: "UI")
+            loadShortcuts()
+        }
+        .navigationTitle(workspace.settings.name)
+        .sheet(isPresented: $showWorkspaceSettings) {
+            WorkspaceSettingsView(workspace: workspace)
+        }
+        .sheet(isPresented: $showAddProgram, onDismiss: {
+            Logger.podoSojuKit.debug("AddProgramView dismissed, reloading shortcuts", category: "UI")
+            loadShortcuts()
+        }) {
+            AddProgramView(workspace: workspace)
         }
     }
 
@@ -78,20 +120,20 @@ struct ShortcutsGridView: View {
 
     // MARK: - Actions
     private func loadShortcuts() {
-        Logger.sojuKit.info("Loading shortcuts for workspace: \(workspace.settings.name)", category: "UI")
+        Logger.podoSojuKit.info("Loading shortcuts for workspace: \(workspace.settings.name)", category: "UI")
 
         Task {
             // 1. Scan .lnk files from Desktop folders
             let discoveredShortcuts = await scanDesktopFolders()
-            Logger.sojuKit.debug("Found \(discoveredShortcuts.count) shortcuts from Desktop folders", category: "UI")
+            Logger.podoSojuKit.debug("Found \(discoveredShortcuts.count) shortcuts from Desktop folders", category: "UI")
 
             // 2. Convert pinnedPrograms to DesktopIcon (with icon extraction)
             let pinnedIcons = workspace.settings.pinnedPrograms.compactMap { pinned -> DesktopIcon? in
                 guard let url = pinned.url else {
-                    Logger.sojuKit.warning("Skipping pinned program '\(pinned.name)' - no URL", category: "UI")
+                    Logger.podoSojuKit.warning("Skipping pinned program '\(pinned.name)' - no URL", category: "UI")
                     return nil
                 }
-                Logger.sojuKit.debug("Adding pinned program: \(pinned.name) -> \(url.path)", category: "UI")
+                Logger.podoSojuKit.debug("Adding pinned program: \(pinned.name) -> \(url.path)", category: "UI")
                 return DesktopIcon(
                     id: pinned.id,
                     name: pinned.name,
@@ -99,7 +141,7 @@ struct ShortcutsGridView: View {
                     iconImage: iconForProgram(name: pinned.name)
                 )
             }
-            Logger.sojuKit.debug("Found \(pinnedIcons.count) pinned programs", category: "UI")
+            Logger.podoSojuKit.debug("Found \(pinnedIcons.count) pinned programs", category: "UI")
 
             // 3. Merge and deduplicate (pinned programs take priority)
             var seenURLs = Set<String>()
@@ -125,7 +167,7 @@ struct ShortcutsGridView: View {
 
             await MainActor.run {
                 shortcuts = mergedShortcuts.sorted()
-                Logger.sojuKit.info("Total shortcuts loaded: \(shortcuts.count) (pinned: \(pinnedIcons.count), discovered: \(discoveredShortcuts.count))", category: "UI")
+                Logger.podoSojuKit.info("Total shortcuts loaded: \(shortcuts.count) (pinned: \(pinnedIcons.count), discovered: \(discoveredShortcuts.count))", category: "UI")
             }
         }
     }
@@ -161,7 +203,17 @@ struct ShortcutsGridView: View {
         for relativePath in allPaths {
             let directoryURL = prefixURL.appendingPathComponent(relativePath)
 
-            guard fileManager.fileExists(atPath: directoryURL.path) else {
+            // Skip if doesn't exist or is a symlink (avoid following to macOS folders)
+            var isDirectory: ObjCBool = false
+            guard fileManager.fileExists(atPath: directoryURL.path, isDirectory: &isDirectory) else {
+                continue
+            }
+
+            // Check if it's a symlink - skip to avoid accessing macOS folders
+            if let attrs = try? fileManager.attributesOfItem(atPath: directoryURL.path),
+               let fileType = attrs[.type] as? FileAttributeType,
+               fileType == .typeSymbolicLink {
+                Logger.podoSojuKit.debug("Skipping symlink: \(relativePath)", category: "UI")
                 continue
             }
 
@@ -254,24 +306,24 @@ struct ShortcutsGridView: View {
     }
 
     private func handleFileDrop(_ providers: [NSItemProvider]) -> Bool {
-        Logger.sojuKit.info("File drop detected (\(providers.count) items)", category: "UI")
+        Logger.podoSojuKit.info("File drop detected (\(providers.count) items)", category: "UI")
 
         for provider in providers {
             provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier) { item, error in
                 if let error = error {
-                    Logger.sojuKit.error("Failed to load dropped file: \(error.localizedDescription)", category: "UI")
+                    Logger.podoSojuKit.error("Failed to load dropped file: \(error.localizedDescription)", category: "UI")
                     return
                 }
 
                 guard let data = item as? Data,
                       let url = URL(dataRepresentation: data, relativeTo: nil) else {
-                    Logger.sojuKit.warning("Invalid file drop data", category: "UI")
+                    Logger.podoSojuKit.warning("Invalid file drop data", category: "UI")
                     return
                 }
 
                 // Only execute .exe files
                 if url.pathExtension.lowercased() == "exe" {
-                    Logger.sojuKit.info("Executing dropped .exe file: \(url.lastPathComponent)", category: "UI")
+                    Logger.podoSojuKit.info("Executing dropped .exe file: \(url.lastPathComponent)", category: "UI")
 
                     Task { @MainActor in
                         // Create program and run
@@ -284,11 +336,11 @@ struct ShortcutsGridView: View {
                         do {
                             try await program.run(in: self.workspace)
                         } catch {
-                            Logger.sojuKit.error("Failed to run dropped program: \(error.localizedDescription)", category: "UI")
+                            Logger.podoSojuKit.error("Failed to run dropped program: \(error.localizedDescription)", category: "UI")
                         }
                     }
                 } else {
-                    Logger.sojuKit.debug("Dropped file is not an .exe, ignoring: \(url.pathExtension)", category: "UI")
+                    Logger.podoSojuKit.debug("Dropped file is not an .exe, ignoring: \(url.pathExtension)", category: "UI")
                 }
             }
         }

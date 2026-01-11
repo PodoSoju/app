@@ -18,29 +18,24 @@ struct ContentView: View {
     @State private var showCreateWorkspace = false
     @State private var showPodoSojuSetup = false
     @State private var hasCheckedPodoSoju = false
+    @State private var showSettings = false
 
     var body: some View {
         Group {
             if showPodoSojuSetup {
-                // PodoSoju not installed - show setup view
                 podoSojuSetupView
             } else if workspaceManager.workspaces.isEmpty {
-                // No workspaces available
                 emptyStateView
-            } else if workspaceManager.workspaces.count == 1 {
-                // Single workspace - go directly to shortcuts grid
-                ShortcutsGridView(workspace: workspaceManager.workspaces[0])
-                    .onAppear {
-                        selectedWorkspace = workspaceManager.workspaces.first
+            } else if let workspace = selectedWorkspace {
+                // 워크스페이스 화면 + 홈 버튼
+                ShortcutsGridView(workspace: workspace, onHome: {
+                    withAnimation {
+                        selectedWorkspace = nil
                     }
+                })
             } else {
-                // Multiple workspaces - show selection screen
-                if let workspace = selectedWorkspace {
-                    ShortcutsGridView(workspace: workspace)
-                        .transition(.opacity)
-                } else {
-                    workspaceSelectionView
-                }
+                // 워크스페이스 선택 화면
+                workspaceSelectionView
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -56,7 +51,7 @@ struct ContentView: View {
         hasCheckedPodoSoju = true
 
         if !SojuManager.shared.isInstalled {
-            Logger.sojuKit.info("PodoSoju not installed, showing setup view")
+            Logger.podoSojuKit.info("PodoSoju not installed, showing setup view")
             showPodoSojuSetup = true
         }
     }
@@ -140,7 +135,6 @@ struct ContentView: View {
                     Text("Installation complete!")
                 }
                 .onAppear {
-                    // Wait a moment then proceed
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                         withAnimation {
                             showPodoSojuSetup = false
@@ -216,17 +210,27 @@ struct ContentView: View {
                         spacing: 20
                     ) {
                         ForEach(workspaceManager.workspaces) { workspace in
-                            WorkspaceCard(workspace: workspace) {
-                                Logger.sojuKit.info("📂 Workspace selected: \(workspace.settings.name)")
+                            WorkspaceCard(
+                                workspace: workspace,
+                                onSelect: {
+                                    Logger.podoSojuKit.info("📂 Workspace selected: \(workspace.settings.name)")
+                                    workspaceManager.selectWorkspace(workspace)
 
-                                // Sync with WorkspaceManager for Wine environment setup
-                                workspaceManager.selectWorkspace(workspace)
-
-                                withAnimation {
-                                    selectedWorkspace = workspace
+                                    withAnimation {
+                                        selectedWorkspace = workspace
+                                    }
+                                },
+                                onDelete: {
+                                    Task {
+                                        do {
+                                            try await workspaceManager.deleteWorkspace(workspace)
+                                            Logger.podoSojuKit.info("🗑️ Workspace deleted: \(workspace.settings.name)")
+                                        } catch {
+                                            Logger.podoSojuKit.error("Failed to delete workspace: \(error)")
+                                        }
+                                    }
                                 }
-                                Logger.sojuKit.debug("✅ Entered workspace: \(workspace.settings.name)")
-                            }
+                            )
                             .frame(minWidth: 200, maxWidth: 300)
                         }
                     }
@@ -235,26 +239,34 @@ struct ContentView: View {
                     .padding(.vertical, 20)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                Button("Back") {
-                    // TODO: Go back to main menu
-                    print("Back to main menu")
-                }
-                .buttonStyle(.bordered)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding()
 
-            // + Button (floating bottom-right)
-            Button(action: { showCreateWorkspace = true }) {
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 44))
-                    .foregroundColor(.accentColor)
+            // Bottom-right buttons (settings, +)
+            HStack(spacing: 12) {
+                // Settings button (전체 설정)
+                Button(action: { showSettings = true }) {
+                    Image(systemName: "gearshape.fill")
+                        .font(.system(size: 36))
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+
+                // + Button (새 워크스페이스)
+                Button(action: { showCreateWorkspace = true }) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 44))
+                        .foregroundColor(.accentColor)
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
             .padding(20)
             .sheet(isPresented: $showCreateWorkspace) {
                 WorkspaceCreationView()
+            }
+            .sheet(isPresented: $showSettings) {
+                SettingsView()
             }
         }
     }
@@ -272,7 +284,6 @@ struct ContentView: View {
                 windowsVersion: .win10
             )
 
-            // After creation, select the workspace
             await MainActor.run {
                 selectedWorkspace = workspace
                 isCreatingWorkspace = false
@@ -290,21 +301,33 @@ struct ContentView: View {
 struct WorkspaceCard: View {
     let workspace: Workspace
     let onSelect: () -> Void
+    let onDelete: () -> Void
+
+    @State private var showDeleteConfirm = false
 
     var body: some View {
         VStack(spacing: 12) {
-            Image(systemName: workspace.settings.icon)
-                .font(.system(size: 48))
-                .foregroundColor(.blue)
+            ZStack(alignment: .topTrailing) {
+                Image(systemName: workspace.settings.icon)
+                    .font(.system(size: 48))
+                    .foregroundColor(.blue)
+
+                // 실행 중 표시
+                if workspace.isRunning {
+                    Circle()
+                        .fill(.green)
+                        .frame(width: 12, height: 12)
+                        .offset(x: 4, y: -4)
+                }
+            }
 
             Text(workspace.settings.name)
                 .font(.headline)
                 .multilineTextAlignment(.center)
 
-            Text(workspace.url.lastPathComponent)
+            Text("\(workspace.desktopShortcutCount) apps")
                 .font(.caption)
                 .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
         }
         .frame(minWidth: 200, minHeight: 150)
         .frame(maxWidth: .infinity)
@@ -319,10 +342,22 @@ struct WorkspaceCard: View {
         )
         .contentShape(Rectangle())
         .onTapGesture(count: 2) {
-            Logger.sojuKit.info("🖱️ Workspace double-clicked: \(workspace.settings.name)")
-            Logger.sojuKit.debug("📂 Entering workspace...")
             onSelect()
-            Logger.sojuKit.debug("✅ onSelect() called")
+        }
+        .contextMenu {
+            Button(role: .destructive) {
+                showDeleteConfirm = true
+            } label: {
+                Label("Delete Workspace", systemImage: "trash")
+            }
+        }
+        .alert("Delete Workspace?", isPresented: $showDeleteConfirm) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                onDelete()
+            }
+        } message: {
+            Text("'\(workspace.settings.name)' will be permanently deleted. This cannot be undone.")
         }
     }
 }

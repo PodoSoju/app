@@ -4,7 +4,7 @@ import OSLog
 /// Scans Wine prefixes for installed programs after installation completes
 @MainActor
 public class ProgramScanner {
-    private static let logger = Logger.sojuKit
+    private static let logger = Logger.podoSojuKit
 
     // MARK: - Scan Configuration
 

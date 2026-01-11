@@ -13,8 +13,12 @@ import UniformTypeIdentifiers
 
 // MARK: - UTType Extension
 extension UTType {
+    // Use declared types from Info.plist UTImportedTypeDeclarations
     static var exe: UTType {
-        UTType(filenameExtension: "exe") ?? .data
+        UTType("com.microsoft.windows-executable") ?? .data
+    }
+    static var msi: UTType {
+        UTType("com.microsoft.msi") ?? .data
     }
 }
 
@@ -38,6 +42,7 @@ struct AddProgramView: View {
     @State private var programName = ""
     @State private var selectedFileURL: URL?
     @State private var isInstaller = false
+    @State private var isPortable = false
 
     // Installation progress state
     @State private var showInstallationProgress = false
@@ -45,6 +50,10 @@ struct AddProgramView: View {
 
     // Wine stub warning
     @State private var showStubWarning = false
+
+    // Portable copy error
+    @State private var showCopyError = false
+    @State private var copyErrorMessage = ""
 
     var body: some View {
         NavigationStack {
@@ -84,6 +93,11 @@ struct AddProgramView: View {
         } message: {
             Text("This program is a Wine system file. It does not actually work.")
         }
+        .alert("Copy Failed", isPresented: $showCopyError) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(copyErrorMessage)
+        }
     }
 
     // MARK: - Mode Selection View
@@ -107,7 +121,7 @@ struct AddProgramView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Add File")
                                 .fontWeight(.medium)
-                            Text("Browse Downloads for installer (.exe)")
+                            Text("Browse Downloads for installer (.exe, .msi)")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -220,6 +234,16 @@ struct AddProgramView: View {
                                 .foregroundColor(.secondary)
                         }
                     }
+                } else if isPortable {
+                    Section {
+                        HStack {
+                            Image(systemName: "doc.on.doc.fill")
+                                .foregroundColor(.blue)
+                            Text("This is a portable program. It will be copied to the workspace.")
+                                .font(.callout)
+                                .foregroundColor(.secondary)
+                        }
+                    }
                 }
             }
         }
@@ -233,6 +257,11 @@ struct AddProgramView: View {
                 if isInstaller {
                     Button("Run Installer") {
                         runInstaller()
+                    }
+                    .disabled(programName.isEmpty || selectedFileURL == nil)
+                } else if isPortable {
+                    Button("Copy & Add") {
+                        copyPortableAndAdd()
                     }
                     .disabled(programName.isEmpty || selectedFileURL == nil)
                 } else {
@@ -258,13 +287,14 @@ struct AddProgramView: View {
 
     // MARK: - Actions
     private func selectExecutable(mode: AddProgramMode) {
-        Logger.sojuKit.debug("Opening file picker for executable selection (mode: \(String(describing: mode)))", category: "UI")
+        Logger.podoSojuKit.debug("Opening file picker for executable selection (mode: \(String(describing: mode)))", category: "UI")
 
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
         panel.canChooseFiles = true
-        panel.allowedContentTypes = [.exe]
+        // Filter by file extension - allowedFileTypes is deprecated but works
+        panel.allowedFileTypes = ["exe", "msi", "lnk"]
         panel.prompt = "Select"
 
         // Set starting directory based on mode
@@ -272,7 +302,7 @@ struct AddProgramView: View {
         case .file:
             // Start from ~/Downloads for installer files
             panel.directoryURL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
-            panel.message = "Select an installer file (.exe) from Downloads"
+            panel.message = "Select an installer file (.exe, .msi) from Downloads"
         case .shortcut:
             // Start from workspace's drive_c folder for shortcuts
             panel.directoryURL = workspace.winePrefixURL
@@ -281,11 +311,11 @@ struct AddProgramView: View {
 
         panel.begin { response in
             if response == .OK, let url = panel.url {
-                Logger.sojuKit.info("Selected executable: \(url.lastPathComponent)", category: "UI")
+                Logger.podoSojuKit.info("Selected executable: \(url.lastPathComponent)", category: "UI")
 
                 // Check if Wine stub and block selection
                 if InstallerDetector.isWineStub(url) {
-                    Logger.sojuKit.warning("Wine stub detected, blocking selection: \(url.lastPathComponent)", category: "UI")
+                    Logger.podoSojuKit.warning("Wine stub detected, blocking selection: \(url.lastPathComponent)", category: "UI")
                     showStubWarning = true
                     selectedFileURL = nil
                     return
@@ -296,11 +326,30 @@ struct AddProgramView: View {
                 // Check if installer and update state
                 isInstaller = InstallerDetector.isInstaller(url)
 
+                // Check if file is outside the workspace (portable)
+                // Portable = file from outside workspace that is not an installer
+                let workspacePath = workspace.url.path
+                let filePath = url.path
+
+                Logger.podoSojuKit.debug("🔍 Portable check:", category: "UI")
+                Logger.podoSojuKit.debug("  workspacePath: \(workspacePath)", category: "UI")
+                Logger.podoSojuKit.debug("  filePath: \(filePath)", category: "UI")
+                Logger.podoSojuKit.debug("  isInstaller: \(isInstaller)", category: "UI")
+                Logger.podoSojuKit.debug("  hasPrefix: \(filePath.hasPrefix(workspacePath))", category: "UI")
+
+                if !isInstaller && !filePath.hasPrefix(workspacePath) {
+                    isPortable = true
+                    Logger.podoSojuKit.info("✅ Detected portable program: \(url.lastPathComponent)", category: "UI")
+                } else {
+                    isPortable = false
+                    Logger.podoSojuKit.debug("❌ Not portable", category: "UI")
+                }
+
                 // Auto-fill program name
                 if isInstaller {
                     // Use friendly name from installer
                     programName = InstallerDetector.installerName(from: url)
-                    Logger.sojuKit.info("Detected installer: \(programName)", category: "UI")
+                    Logger.podoSojuKit.info("Detected installer: \(programName)", category: "UI")
                 } else {
                     // Use filename without extension
                     programName = url.deletingPathExtension().lastPathComponent
@@ -314,24 +363,24 @@ struct AddProgramView: View {
 
     private func addProgram() {
         guard let url = selectedFileURL else {
-            Logger.sojuKit.warning("Cannot add program: no file selected", category: "UI")
+            Logger.podoSojuKit.warning("Cannot add program: no file selected", category: "UI")
             return
         }
 
-        Logger.sojuKit.info("Adding program: \(programName) (\(url.lastPathComponent))", category: "UI")
-        Logger.sojuKit.debug("  URL: \(url.path)", category: "UI")
-        Logger.sojuKit.debug("  Workspace: \(workspace.settings.name)", category: "UI")
-        Logger.sojuKit.debug("  Current pinnedPrograms count: \(workspace.settings.pinnedPrograms.count)", category: "UI")
+        Logger.podoSojuKit.info("Adding program: \(programName) (\(url.lastPathComponent))", category: "UI")
+        Logger.podoSojuKit.debug("  URL: \(url.path)", category: "UI")
+        Logger.podoSojuKit.debug("  Workspace: \(workspace.settings.name)", category: "UI")
+        Logger.podoSojuKit.debug("  Current pinnedPrograms count: \(workspace.settings.pinnedPrograms.count)", category: "UI")
 
         let program = PinnedProgram(name: programName, url: url)
         workspace.settings.pinnedPrograms.append(program)
 
-        Logger.sojuKit.info("Program added successfully", category: "UI")
-        Logger.sojuKit.debug("  New pinnedPrograms count: \(workspace.settings.pinnedPrograms.count)", category: "UI")
+        Logger.podoSojuKit.info("Program added successfully", category: "UI")
+        Logger.podoSojuKit.debug("  New pinnedPrograms count: \(workspace.settings.pinnedPrograms.count)", category: "UI")
 
         // Log all pinned programs for debugging
         for (index, pinned) in workspace.settings.pinnedPrograms.enumerated() {
-            Logger.sojuKit.debug("  [\(index)] \(pinned.name): \(pinned.url?.path ?? "nil")", category: "UI")
+            Logger.podoSojuKit.debug("  [\(index)] \(pinned.name): \(pinned.url?.path ?? "nil")", category: "UI")
         }
 
         dismiss()
@@ -339,14 +388,56 @@ struct AddProgramView: View {
 
     private func runInstaller() {
         guard let url = selectedFileURL else {
-            Logger.sojuKit.warning("Cannot run installer: no file selected", category: "UI")
+            Logger.podoSojuKit.warning("Cannot run installer: no file selected", category: "UI")
             return
         }
 
-        Logger.sojuKit.info("Starting installer: \(programName) (\(url.lastPathComponent))", category: "UI")
+        Logger.podoSojuKit.info("Starting installer: \(programName) (\(url.lastPathComponent))", category: "UI")
 
-        installerProgram = Program(name: programName, url: url)
-        showInstallationProgress = true
+        // Run the installer directly without showing progress view
+        let program = Program(name: programName, url: url)
+        print("[DEBUG] Running installer: \(url.path)")
+        Task {
+            do {
+                try await program.run(in: workspace)
+                print("[DEBUG] Installer completed")
+            } catch {
+                print("[DEBUG] Installer error: \(error)")
+            }
+        }
+
+        // Close the modal immediately
+        dismiss()
+    }
+
+    private func copyPortableAndAdd() {
+        guard let sourceURL = selectedFileURL else {
+            Logger.podoSojuKit.warning("Cannot copy portable: no file selected", category: "UI")
+            return
+        }
+
+        Logger.podoSojuKit.info("Copying portable program: \(programName) (\(sourceURL.lastPathComponent))", category: "UI")
+
+        do {
+            // Copy the file to workspace's Programs folder
+            let destinationURL = try workspace.copyPortableProgram(from: sourceURL)
+
+            Logger.podoSojuKit.info("Portable program copied to: \(destinationURL.path)", category: "UI")
+            Logger.podoSojuKit.debug("  Workspace: \(workspace.settings.name)", category: "UI")
+
+            // Add as pinned program using the copied location
+            let program = PinnedProgram(name: programName, url: destinationURL)
+            workspace.settings.pinnedPrograms.append(program)
+
+            Logger.podoSojuKit.info("Portable program added successfully", category: "UI")
+            Logger.podoSojuKit.debug("  New pinnedPrograms count: \(workspace.settings.pinnedPrograms.count)", category: "UI")
+
+            dismiss()
+        } catch {
+            Logger.podoSojuKit.error("Failed to copy portable program: \(error.localizedDescription)", category: "UI")
+            copyErrorMessage = error.localizedDescription
+            showCopyError = true
+        }
     }
 }
 

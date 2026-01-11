@@ -18,6 +18,7 @@ struct ShortcutView: View {
     @State private var showError = false
     @State private var errorMessage = ""
     @State private var showDeleteConfirmation = false
+    @State private var isSelected = false
 
     var body: some View {
         VStack(spacing: 8) {
@@ -44,14 +45,26 @@ struct ShortcutView: View {
         }
         .frame(width: 90, height: 90)
         .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(isSelected ? Color.white.opacity(0.2) : Color.clear)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(isSelected ? Color.white.opacity(0.5) : Color.clear, lineWidth: 1)
+        )
         .contentShape(Rectangle())
+        .onTapGesture(count: 1) {
+            // Single click: select/focus
+            isSelected = true
+        }
         .onTapGesture(count: 2) {
             runProgram()
         }
         .contextMenu {
             Button("Rename", systemImage: "pencil.line") {
                 // TODO: Implement rename functionality
-                Logger.sojuKit.debug("Rename requested for: \(shortcut.name)")
+                Logger.podoSojuKit.debug("Rename requested for: \(shortcut.name)")
             }
             Button(role: .destructive) {
                 showDeleteConfirmation = true
@@ -107,12 +120,12 @@ struct ShortcutView: View {
 
             // pgrep으로 실제 실행 중인지 확인
             if SojuManager.shared.isProcessRunning(exeName: exeName) {
-                Logger.sojuKit.info("Program already running (pgrep): \(exeName)")
+                Logger.podoSojuKit.info("Program already running (pgrep): \(exeName)")
 
                 // 이미 실행 중 -> 포커스만
                 await MainActor.run {
                     if workspace.focusRunningProgram(shortcut.url) {
-                        Logger.sojuKit.info("Successfully focused: \(shortcut.name)")
+                        Logger.podoSojuKit.info("Successfully focused: \(shortcut.name)")
                     }
                 }
                 return
@@ -137,8 +150,11 @@ struct ShortcutView: View {
             }
         }
 
+        // 대기 중인 프로그램 등록
+        Self.pendingLaunches.insert(shortcut.url)
+        let launchTime = Date()
+
         // Create program and run
-        // Note: Program.run() handles registration/unregistration internally
         let program = Program(
             name: shortcut.name,
             url: shortcut.url
@@ -146,34 +162,92 @@ struct ShortcutView: View {
 
         Task {
             do {
-                Logger.sojuKit.info("Running program: \(shortcut.name)")
+                Logger.podoSojuKit.info("Running program: \(shortcut.name)")
                 try await program.run(in: workspace)
-                Logger.sojuKit.info("Program started: \(shortcut.name)")
+                Logger.podoSojuKit.info("Program started: \(shortcut.name)")
 
-                // Wine 창이 뜰 때까지 대기 후 포커스 (무제한 대기)
-                var attempt = 0
-                while true {
+                // 새 Wine 창이 뜰 때까지 대기 (최대 60초)
+                for attempt in 1...60 {
                     try await Task.sleep(nanoseconds: 1_000_000_000)
-                    attempt += 1
-                    let focused = await MainActor.run {
-                        workspace.focusRunningProgram(shortcut.url)
+
+                    // 내 프로그램의 창이 열렸는지 확인
+                    let (found, shouldStop) = await MainActor.run {
+                        checkMyWindowOpened(programURL: shortcut.url, launchTime: launchTime)
                     }
-                    if focused {
-                        Logger.sojuKit.info("✅ Auto-focused after \(attempt)s")
-                        await MainActor.run { isLoading = false }
+
+                    if found {
+                        Logger.podoSojuKit.info("✅ Window detected after \(attempt)s: \(shortcut.name)")
+                        await MainActor.run {
+                            workspace.focusRunningProgram(shortcut.url)
+                            isLoading = false
+                            Self.pendingLaunches.remove(shortcut.url)
+                        }
                         return
                     }
+
+                    if shouldStop {
+                        // 프로세스가 종료됨
+                        break
+                    }
                 }
+                Logger.podoSojuKit.warning("No window after 60s: \(shortcut.name)")
             } catch {
                 await MainActor.run {
                     errorMessage = error.localizedDescription
                     showError = true
                 }
-                Logger.sojuKit.error("Failed to run program \(shortcut.name): \(error.localizedDescription)")
+                Logger.podoSojuKit.error("Failed to run program \(shortcut.name): \(error.localizedDescription)")
             }
 
-            await MainActor.run { isLoading = false }
+            await MainActor.run {
+                isLoading = false
+                Self.pendingLaunches.remove(shortcut.url)
+            }
         }
+    }
+
+    // 대기 중인 프로그램 추적 (static으로 공유)
+    private static var pendingLaunches: Set<URL> = []
+
+    /// 내 프로그램의 창이 열렸는지 확인
+    private func checkMyWindowOpened(programURL: URL, launchTime: Date) -> (found: Bool, shouldStop: Bool) {
+        let programName = programURL.deletingPathExtension().lastPathComponent.lowercased()
+
+        // pgrep으로 프로세스 실행 중인지 확인
+        let isRunning = SojuManager.shared.isProcessRunning(exeName: programName + ".exe")
+
+        if !isRunning {
+            // 프로세스가 종료됨 (설치 완료 등)
+            return (false, true)
+        }
+
+        // Wine 창 목록에서 내 프로그램 찾기
+        guard let windowList = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else {
+            return (false, false)
+        }
+
+        for window in windowList {
+            guard let ownerName = window[kCGWindowOwnerName as String] as? String else {
+                continue
+            }
+
+            if ownerName.lowercased().contains("wine") {
+                let windowName = window[kCGWindowName as String] as? String ?? ""
+                let windowNameLower = windowName.lowercased()
+
+                // 창 제목이 프로그램 이름과 매칭되면 확실
+                if !windowNameLower.isEmpty && windowNameLower.contains(programName) {
+                    return (true, false)
+                }
+
+                // 창 제목이 없어도, 대기 중인 프로그램이 하나뿐이면 OK
+                if windowName.isEmpty && Self.pendingLaunches.count == 1 {
+                    return (true, false)
+                }
+            }
+        }
+
+        return (false, false)
     }
 
     private func deleteShortcut() {
@@ -185,7 +259,7 @@ struct ShortcutView: View {
             try? FileManager.default.removeItem(at: shortcut.url)
         }
 
-        Logger.sojuKit.info("Deleted shortcut: \(shortcut.name)")
+        Logger.podoSojuKit.info("Deleted shortcut: \(shortcut.name)")
     }
 }
 

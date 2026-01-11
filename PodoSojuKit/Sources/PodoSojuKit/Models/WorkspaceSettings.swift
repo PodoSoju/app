@@ -1,6 +1,6 @@
 //
 //  WorkspaceSettings.swift
-//  SojuKit
+//  PodoSojuKit
 //
 //  Created on 2026-01-07.
 //
@@ -190,7 +190,7 @@ public struct WorkspaceSettings: Codable, Equatable {
         var settings = try decoder.decode(WorkspaceSettings.self, from: data)
 
         guard settings.fileVersion == WorkspaceSettings.defaultFileVersion else {
-            Logger.sojuKit.warning("Invalid file version `\(settings.fileVersion)`")
+            Logger.podoSojuKit.warning("Invalid file version `\(settings.fileVersion)`")
             settings = WorkspaceSettings()
             try settings.encode(to: metadataURL)
             return settings

@@ -1,16 +1,16 @@
 //
-//  SojuKit.swift
-//  SojuKit
+//  PodoSojuKit.swift
+//  PodoSojuKit
 //
 //  Created on 2026-01-07.
 //
 
 import Foundation
 
-/// SojuKit - Core framework for Soju macOS app
+/// PodoSojuKit - Core framework for Soju macOS app
 ///
 /// # Overview
-/// SojuKit provides workspace management for Wine-based Windows environments on macOS.
+/// PodoSojuKit provides workspace management for Wine-based Windows environments on macOS.
 /// Each workspace represents an independent Windows PC environment.
 ///
 /// # Key Components
@@ -21,7 +21,7 @@ import Foundation
 ///
 /// # Usage
 /// ```swift
-/// import PodoSojuKit
+/// import PodoPodoSojuKit
 ///
 /// let manager = WorkspaceManager.shared
 /// manager.loadWorkspaces()
@@ -36,7 +36,7 @@ import Foundation
 /// // Select workspace
 /// manager.selectWorkspace(workspace)
 /// ```
-public struct SojuKit {
+public struct PodoSojuKit {
     public static let version = "1.0.0"
 
     public init() {}

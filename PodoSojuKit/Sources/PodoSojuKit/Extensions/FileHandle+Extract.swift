@@ -1,6 +1,6 @@
 //
 //  FileHandle+Extract.swift
-//  SojuKit
+//  PodoSojuKit
 //
 //  Created on 2026-01-09.
 //  Based on WhiskyKit's implementation

@@ -1,6 +1,6 @@
 //
 //  WorkspaceData.swift
-//  SojuKit
+//  PodoSojuKit
 //
 //  Created on 2026-01-07.
 //

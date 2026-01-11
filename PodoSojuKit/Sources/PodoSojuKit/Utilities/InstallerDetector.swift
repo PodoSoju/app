@@ -1,6 +1,6 @@
 //
 //  InstallerDetector.swift
-//  SojuKit
+//  PodoSojuKit
 //
 //  Created on 2026-01-08.
 //
@@ -80,7 +80,7 @@ public struct InstallerDetector {
         // Check for uninstaller keywords
         for keyword in excludeKeywords {
             if filename.contains(keyword) {
-                Logger.sojuKit.debug(
+                Logger.podoSojuKit.debug(
                     "File contains uninstaller keyword '\(keyword)': is uninstaller",
                     category: "InstallerDetector"
                 )
@@ -137,7 +137,7 @@ public struct InstallerDetector {
 
         // 4. Check file content for "stub" byte pattern
         guard let data = try? Data(contentsOf: url, options: .mappedIfSafe) else {
-            Logger.sojuKit.debug(
+            Logger.podoSojuKit.debug(
                 "Could not read file content: \(url.lastPathComponent)",
                 category: "InstallerDetector"
             )
@@ -150,7 +150,7 @@ public struct InstallerDetector {
         let containsStub = data.range(of: stubPattern) != nil || data.range(of: stubPatternUpper) != nil
 
         if containsStub {
-            Logger.sojuKit.debug(
+            Logger.podoSojuKit.debug(
                 "File '\(url.lastPathComponent)' is a Wine stub program (size: \(size) bytes)",
                 category: "InstallerDetector"
             )
@@ -182,7 +182,7 @@ public struct InstallerDetector {
     public static func isInstaller(_ url: URL) -> Bool {
         let filename = url.deletingPathExtension().lastPathComponent.lowercased()
 
-        Logger.sojuKit.debug(
+        Logger.podoSojuKit.debug(
             "Checking installer status for: \(url.lastPathComponent)",
             category: "InstallerDetector"
         )
@@ -191,7 +191,7 @@ public struct InstallerDetector {
         // First exclude uninstaller files
         for excludeKeyword in excludeKeywords {
             if filename.contains(excludeKeyword) {
-                Logger.sojuKit.debug(
+                Logger.podoSojuKit.debug(
                     "File contains exclude keyword '\(excludeKeyword)': not an installer",
                     category: "InstallerDetector"
                 )
@@ -203,7 +203,7 @@ public struct InstallerDetector {
         let hasInstallerKeyword = installerKeywords.contains { filename.contains($0) }
         
         if hasInstallerKeyword {
-            Logger.sojuKit.info(
+            Logger.podoSojuKit.info(
                 "File contains installer keyword: is installer",
                 category: "InstallerDetector"
             )
@@ -211,7 +211,7 @@ public struct InstallerDetector {
         }
 
         // Stage 2: Check file signature (slower but accurate)
-        Logger.sojuKit.debug(
+        Logger.podoSojuKit.debug(
             "No installer keywords in filename, checking file signature...",
             category: "InstallerDetector"
         )
@@ -230,7 +230,7 @@ public struct InstallerDetector {
     private static func checkFileSignature(_ url: URL) -> Bool {
         // Verify file exists
         guard FileManager.default.fileExists(atPath: url.path) else {
-            Logger.sojuKit.warning(
+            Logger.podoSojuKit.warning(
                 "File does not exist: \(url.path)",
                 category: "InstallerDetector"
             )
@@ -253,7 +253,7 @@ public struct InstallerDetector {
             if let output = String(data: data, encoding: .utf8) {
                 let lowercased = output.lowercased()
 
-                Logger.sojuKit.debug(
+                Logger.podoSojuKit.debug(
                     "file command output: \(output.trimmingCharacters(in: .whitespacesAndNewlines))",
                     category: "InstallerDetector"
                 )
@@ -261,7 +261,7 @@ public struct InstallerDetector {
                 // Check for known installer signatures
                 for signature in installerSignatures {
                     if lowercased.contains(signature) {
-                        Logger.sojuKit.info(
+                        Logger.podoSojuKit.info(
                             "Detected installer signature '\(signature)': is installer",
                             category: "InstallerDetector"
                         )
@@ -269,14 +269,14 @@ public struct InstallerDetector {
                     }
                 }
 
-                Logger.sojuKit.debug(
+                Logger.podoSojuKit.debug(
                     "No installer signature found in file output",
                     category: "InstallerDetector"
                 )
                 return false
             }
         } catch {
-            Logger.sojuKit.error(
+            Logger.podoSojuKit.error(
                 "Failed to check file signature: \(error.localizedDescription)",
                 category: "InstallerDetector"
             )
@@ -314,7 +314,7 @@ public struct InstallerDetector {
         let filenameWithoutExt = url.deletingPathExtension().lastPathComponent
         var programName = filenameWithoutExt
 
-        Logger.sojuKit.debug(
+        Logger.podoSojuKit.debug(
             "Extracting program name from: \(url.lastPathComponent)",
             category: "InstallerDetector"
         )
@@ -344,7 +344,7 @@ public struct InstallerDetector {
                     options: [.caseInsensitive]
                 ) {
                     programName.removeSubrange(range)
-                    Logger.sojuKit.debug(
+                    Logger.podoSojuKit.debug(
                         "Removed pattern '\(pattern)': \(programName)",
                         category: "InstallerDetector"
                     )
@@ -360,12 +360,12 @@ public struct InstallerDetector {
         // If we removed everything, fall back to original filename
         if programName.isEmpty {
             programName = filenameWithoutExt
-            Logger.sojuKit.warning(
+            Logger.podoSojuKit.warning(
                 "Program name extraction resulted in empty string, using original: \(programName)",
                 category: "InstallerDetector"
             )
         } else {
-            Logger.sojuKit.info(
+            Logger.podoSojuKit.info(
                 "Extracted program name: \(programName)",
                 category: "InstallerDetector"
             )

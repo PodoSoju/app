@@ -12,9 +12,6 @@ let package = Package(
         .library(
             name: "PodoSojuKit",
             targets: ["PodoSojuKit"]),
-        .library(
-            name: "SojuKit",
-            targets: ["PodoSojuKit"]),
     ],
     dependencies: [
         .package(url: "https://github.com/SwiftPackageIndex/SemanticVersion.git", from: "0.3.0")
@@ -23,12 +20,12 @@ let package = Package(
         .target(
             name: "PodoSojuKit",
             dependencies: ["SemanticVersion"],
-            path: "Sources/SojuKit"
+            path: "Sources/PodoSojuKit"
         ),
         .testTarget(
             name: "PodoSojuKitTests",
             dependencies: ["PodoSojuKit"],
-            path: "Tests/SojuKitTests"
+            path: "Tests/PodoSojuKitTests"
         ),
     ]
 )

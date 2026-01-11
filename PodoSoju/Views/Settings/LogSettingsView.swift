@@ -86,9 +86,9 @@ struct LogSettingsView: View {
             // Create new empty log file
             try "".write(to: logFile, atomically: true, encoding: .utf8)
 
-            Logger.sojuKit.info("🗑️ Logs cleared", category: "LogSettings")
+            Logger.podoSojuKit.info("🗑️ Logs cleared", category: "LogSettings")
         } catch {
-            Logger.sojuKit.error("Failed to clear logs: \(error.localizedDescription)", category: "LogSettings")
+            Logger.podoSojuKit.error("Failed to clear logs: \(error.localizedDescription)", category: "LogSettings")
         }
     }
 }

@@ -20,7 +20,10 @@
 		CADC5418CE7BADA460DFF854 /* ShortcutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6572663D7438CFFD21662352 /* ShortcutView.swift */; };
 		0CAEEAFF957AE6FAB4009B65 /* ShortcutsGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F8D253DE5D39D588755C846 /* ShortcutsGridView.swift */; };
 		B7270A7A2D3517B9063BA97B /* WorkspaceCreationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFCE5646F437B39D37FBC422 /* WorkspaceCreationView.swift */; };
-		A10000007A000001 /* SojuKit in Frameworks */ = {isa = PBXBuildFile; productRef = A10000008A000001 /* SojuKit */; };
+		WSSV00012D3517B9063BA97B /* WorkspaceSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WSSV00022D3517B9063BA97B /* WorkspaceSettingsView.swift */; };
+		OWS000012D3517B9063BA97B /* OpenWorkspacesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = OWS000022D3517B9063BA97B /* OpenWorkspacesStore.swift */; };
+		WAC000012D3517B9063BA97B /* WindowAccessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = WAC000022D3517B9063BA97B /* WindowAccessor.swift */; };
+		A10000007A000001 /* PodoSojuKit in Frameworks */ = {isa = PBXBuildFile; productRef = A10000008A000001 /* PodoSojuKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -37,8 +40,11 @@
 		6572663D7438CFFD21662352 /* ShortcutView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ShortcutView.swift; path = PodoSoju/Views/Workspace/ShortcutView.swift; sourceTree = SOURCE_ROOT; };
 		3F8D253DE5D39D588755C846 /* ShortcutsGridView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ShortcutsGridView.swift; path = PodoSoju/Views/Workspace/ShortcutsGridView.swift; sourceTree = SOURCE_ROOT; };
 		AFCE5646F437B39D37FBC422 /* WorkspaceCreationView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WorkspaceCreationView.swift; path = PodoSoju/Views/Creation/WorkspaceCreationView.swift; sourceTree = SOURCE_ROOT; };
+		WSSV00022D3517B9063BA97B /* WorkspaceSettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WorkspaceSettingsView.swift; path = PodoSoju/Views/Workspace/WorkspaceSettingsView.swift; sourceTree = SOURCE_ROOT; };
+		OWS000022D3517B9063BA97B /* OpenWorkspacesStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PodoSoju/OpenWorkspacesStore.swift; sourceTree = SOURCE_ROOT; };
+		WAC000022D3517B9063BA97B /* WindowAccessor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PodoSoju/WindowAccessor.swift; sourceTree = SOURCE_ROOT; };
 		A10000009A000001 /* PodoSoju.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PodoSoju.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		A1000000CA000001 /* SojuKit */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = SojuKit; path = SojuKit; sourceTree = "<group>"; };
+		A1000000CA000001 /* PodoSojuKit */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = PodoSojuKit; path = PodoSojuKit; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -46,7 +52,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A10000007A000001 /* SojuKit in Frameworks */,
+				A10000007A000001 /* PodoSojuKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -56,7 +62,7 @@
 		A1000000EA000001 = {
 			isa = PBXGroup;
 			children = (
-				A1000000CA000001 /* SojuKit */,
+				A1000000CA000001 /* PodoSojuKit */,
 				A1000000FA000001 /* Soju */,
 				A10000010A000001 /* Products */,
 			);
@@ -77,6 +83,8 @@
 				38DF21AEF4612506D6BE5CBE /* Views */,
 				C83AD637ECE2A3D4EA4E87E3 /* ContentView.swift */,
 				2160B4D3A93A2922921DEB55 /* PodoSojuApp.swift */,
+				OWS000022D3517B9063BA97B /* OpenWorkspacesStore.swift */,
+				WAC000022D3517B9063BA97B /* WindowAccessor.swift */,
 			);
 			path = PodoSoju;
 			sourceTree = "<group>";
@@ -134,6 +142,7 @@
 			children = (
 				6572663D7438CFFD21662352 /* ShortcutView.swift */,
 				3F8D253DE5D39D588755C846 /* ShortcutsGridView.swift */,
+				WSSV00022D3517B9063BA97B /* WorkspaceSettingsView.swift */,
 			);
 			name = Workspace;
 			sourceTree = "<group>";
@@ -155,7 +164,7 @@
 			);
 			name = PodoSoju;
 			packageProductDependencies = (
-				A10000008A000001 /* SojuKit */,
+				A10000008A000001 /* PodoSojuKit */,
 			);
 			productName = PodoSoju;
 			productReference = A10000009A000001 /* PodoSoju.app */;
@@ -223,6 +232,9 @@
 				CADC5418CE7BADA460DFF854 /* ShortcutView.swift in Sources */,
 				0CAEEAFF957AE6FAB4009B65 /* ShortcutsGridView.swift in Sources */,
 				B7270A7A2D3517B9063BA97B /* WorkspaceCreationView.swift in Sources */,
+				WSSV00012D3517B9063BA97B /* WorkspaceSettingsView.swift in Sources */,
+				OWS000012D3517B9063BA97B /* OpenWorkspacesStore.swift in Sources */,
+				WAC000012D3517B9063BA97B /* WindowAccessor.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -371,7 +383,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.soju.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.podosoju.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
@@ -400,7 +412,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.soju.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.podosoju.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
@@ -431,9 +443,9 @@
 /* End XCConfigurationList section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		A10000008A000001 /* SojuKit */ = {
+		A10000008A000001 /* PodoSojuKit */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = SojuKit;
+			productName = PodoSojuKit;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

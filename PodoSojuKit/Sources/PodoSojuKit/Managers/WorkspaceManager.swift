@@ -1,6 +1,6 @@
 //
 //  WorkspaceManager.swift
-//  SojuKit
+//  PodoSojuKit
 //
 //  Created on 2026-01-07.
 //
@@ -70,9 +70,9 @@ public class WorkspaceManager: ObservableObject {
         // Install fonts
         do {
             try SojuManager.shared.installCJKFonts(workspace: workspace)
-            Logger.sojuKit.info("CJK fonts installed for existing workspace: \(workspace.settings.name)", category: "WorkspaceManager")
+            Logger.podoSojuKit.info("CJK fonts installed for existing workspace: \(workspace.settings.name)", category: "WorkspaceManager")
         } catch {
-            Logger.sojuKit.warning("Failed to install CJK fonts for workspace \(workspace.settings.name): \(error.localizedDescription)", category: "WorkspaceManager")
+            Logger.podoSojuKit.warning("Failed to install CJK fonts for workspace \(workspace.settings.name): \(error.localizedDescription)", category: "WorkspaceManager")
         }
     }
 
@@ -85,28 +85,28 @@ public class WorkspaceManager: ObservableObject {
         windowsVersion: WinVersion = .win10
     ) async throws -> Workspace {
         let startTime = Date()
-        Logger.sojuKit.info("🏗️ [1/6] Creating workspace: '\(name)'", category: "WorkspaceManager")
-        Logger.sojuKit.debug("    ├─ Icon: '\(icon)'", category: "WorkspaceManager")
-        Logger.sojuKit.debug("    ├─ Windows version: '\(windowsVersion)'", category: "WorkspaceManager")
-        Logger.sojuKit.debug("    └─ Base directory: \(WorkspaceData.defaultWorkspacesDir.path())", category: "WorkspaceManager")
+        Logger.podoSojuKit.info("🏗️ [1/6] Creating workspace: '\(name)'", category: "WorkspaceManager")
+        Logger.podoSojuKit.debug("    ├─ Icon: '\(icon)'", category: "WorkspaceManager")
+        Logger.podoSojuKit.debug("    ├─ Windows version: '\(windowsVersion)'", category: "WorkspaceManager")
+        Logger.podoSojuKit.debug("    └─ Base directory: \(WorkspaceData.defaultWorkspacesDir.path())", category: "WorkspaceManager")
 
         // 1. Create workspace directory
         let workspaceURL = WorkspaceData.defaultWorkspacesDir
             .appending(path: UUID().uuidString)
 
-        Logger.sojuKit.info("📁 [2/6] Creating workspace directory...", category: "WorkspaceManager")
-        Logger.sojuKit.debug("    └─ Path: \(workspaceURL.path())", category: "WorkspaceManager")
+        Logger.podoSojuKit.info("📁 [2/6] Creating workspace directory...", category: "WorkspaceManager")
+        Logger.podoSojuKit.debug("    └─ Path: \(workspaceURL.path())", category: "WorkspaceManager")
 
         try FileManager.default.createDirectory(
             at: workspaceURL,
             withIntermediateDirectories: true
         )
-        Logger.sojuKit.info("    ✅ Directory created", category: "WorkspaceManager")
+        Logger.podoSojuKit.info("    ✅ Directory created", category: "WorkspaceManager")
 
         // 2. Initialize Wine prefix
-        Logger.sojuKit.info("🍷 [3/6] Initializing Wine prefix with wineboot...", category: "WorkspaceManager")
-        Logger.sojuKit.debug("    ├─ WINEPREFIX: \(workspaceURL.path())", category: "WorkspaceManager")
-        Logger.sojuKit.debug("    └─ This may take 10-20 seconds", category: "WorkspaceManager")
+        Logger.podoSojuKit.info("🍷 [3/6] Initializing Wine prefix with wineboot...", category: "WorkspaceManager")
+        Logger.podoSojuKit.debug("    ├─ WINEPREFIX: \(workspaceURL.path())", category: "WorkspaceManager")
+        Logger.podoSojuKit.debug("    └─ This may take 10-20 seconds", category: "WorkspaceManager")
 
         let tempWorkspace = Workspace(workspaceUrl: workspaceURL, isAvailable: true)
         do {
@@ -120,32 +120,32 @@ public class WorkspaceManager: ObservableObject {
             let driveCExists = FileManager.default.fileExists(atPath: driveCPath.path())
             let dosdevicesExists = FileManager.default.fileExists(atPath: dosdevicesPath.path())
 
-            Logger.sojuKit.info("    ✅ Wine prefix initialized in \(String(format: "%.1f", winebootDuration))s", category: "WorkspaceManager")
-            Logger.sojuKit.debug("    ├─ drive_c: \(driveCExists ? "✓" : "✗")", category: "WorkspaceManager")
-            Logger.sojuKit.debug("    └─ dosdevices: \(dosdevicesExists ? "✓" : "✗")", category: "WorkspaceManager")
+            Logger.podoSojuKit.info("    ✅ Wine prefix initialized in \(String(format: "%.1f", winebootDuration))s", category: "WorkspaceManager")
+            Logger.podoSojuKit.debug("    ├─ drive_c: \(driveCExists ? "✓" : "✗")", category: "WorkspaceManager")
+            Logger.podoSojuKit.debug("    └─ dosdevices: \(dosdevicesExists ? "✓" : "✗")", category: "WorkspaceManager")
 
             if !driveCExists || !dosdevicesExists {
-                Logger.sojuKit.warning("    ⚠️  Incomplete Wine prefix structure", category: "WorkspaceManager")
+                Logger.podoSojuKit.warning("    ⚠️  Incomplete Wine prefix structure", category: "WorkspaceManager")
             }
 
             // Install CJK fonts for Korean/Japanese/Chinese support
-            Logger.sojuKit.info("🔤 [3.5/6] Installing CJK fonts...", category: "WorkspaceManager")
+            Logger.podoSojuKit.info("🔤 [3.5/6] Installing CJK fonts...", category: "WorkspaceManager")
             do {
                 try SojuManager.shared.installCJKFonts(workspace: tempWorkspace)
-                Logger.sojuKit.info("    ✅ CJK fonts installed", category: "WorkspaceManager")
+                Logger.podoSojuKit.info("    ✅ CJK fonts installed", category: "WorkspaceManager")
             } catch {
                 // Font installation failure is non-fatal - log warning but continue
-                Logger.sojuKit.warning("    ⚠️  CJK font installation failed: \(error.localizedDescription)", category: "WorkspaceManager")
+                Logger.podoSojuKit.warning("    ⚠️  CJK font installation failed: \(error.localizedDescription)", category: "WorkspaceManager")
             }
         } catch {
-            Logger.sojuKit.error("    ❌ Failed to initialize Wine prefix: \(error)", category: "WorkspaceManager")
-            Logger.sojuKit.error("    └─ Cleaning up workspace directory", category: "WorkspaceManager")
+            Logger.podoSojuKit.error("    ❌ Failed to initialize Wine prefix: \(error)", category: "WorkspaceManager")
+            Logger.podoSojuKit.error("    └─ Cleaning up workspace directory", category: "WorkspaceManager")
             try? FileManager.default.removeItem(at: workspaceURL)
             throw error
         }
 
         // 3. Create metadata
-        Logger.sojuKit.info("💾 [4/6] Creating workspace metadata...", category: "WorkspaceManager")
+        Logger.podoSojuKit.info("💾 [4/6] Creating workspace metadata...", category: "WorkspaceManager")
         var settings = WorkspaceSettings()
         settings.name = name
         settings.icon = icon
@@ -155,29 +155,29 @@ public class WorkspaceManager: ObservableObject {
             .appending(path: "Metadata")
             .appendingPathExtension("plist")
 
-        Logger.sojuKit.debug("    └─ Saving to: \(metadataURL.path())", category: "WorkspaceManager")
+        Logger.podoSojuKit.debug("    └─ Saving to: \(metadataURL.path())", category: "WorkspaceManager")
         try settings.encode(to: metadataURL)
-        Logger.sojuKit.info("    ✅ Metadata saved", category: "WorkspaceManager")
+        Logger.podoSojuKit.info("    ✅ Metadata saved", category: "WorkspaceManager")
 
         // 4. Register in WorkspaceData
-        Logger.sojuKit.info("📝 [5/6] Registering workspace in WorkspaceData...", category: "WorkspaceManager")
+        Logger.podoSojuKit.info("📝 [5/6] Registering workspace in WorkspaceData...", category: "WorkspaceManager")
         var data = WorkspaceData()
         data.workspacePaths.append(workspaceURL)
-        Logger.sojuKit.info("    ✅ Registered (\(data.workspacePaths.count) total workspaces)", category: "WorkspaceManager")
+        Logger.podoSojuKit.info("    ✅ Registered (\(data.workspacePaths.count) total workspaces)", category: "WorkspaceManager")
 
         // 5. Create and return Workspace object
         let workspace = Workspace(workspaceUrl: workspaceURL, isAvailable: true)
 
         // 6. Reload workspaces
-        Logger.sojuKit.info("🔄 [6/6] Reloading workspace list...", category: "WorkspaceManager")
+        Logger.podoSojuKit.info("🔄 [6/6] Reloading workspace list...", category: "WorkspaceManager")
         await MainActor.run {
             loadWorkspaces()
         }
-        Logger.sojuKit.info("    ✅ Workspaces reloaded", category: "WorkspaceManager")
+        Logger.podoSojuKit.info("    ✅ Workspaces reloaded", category: "WorkspaceManager")
 
         let totalDuration = Date().timeIntervalSince(startTime)
-        Logger.sojuKit.info("🎉 Workspace '\(name)' created successfully in \(String(format: "%.1f", totalDuration))s", category: "WorkspaceManager")
-        Logger.sojuKit.debug("    └─ UUID: \(workspace.id)", category: "WorkspaceManager")
+        Logger.podoSojuKit.info("🎉 Workspace '\(name)' created successfully in \(String(format: "%.1f", totalDuration))s", category: "WorkspaceManager")
+        Logger.podoSojuKit.debug("    └─ UUID: \(workspace.id)", category: "WorkspaceManager")
 
         return workspace
     }
@@ -197,24 +197,24 @@ public class WorkspaceManager: ObservableObject {
 
     /// Select a workspace as current
     public func selectWorkspace(_ workspace: Workspace) {
-        Logger.sojuKit.info("🎯 Selecting workspace: '\(workspace.settings.name)'", category: "WorkspaceManager")
-        Logger.sojuKit.debug("Workspace URL: \(workspace.url.path(percentEncoded: false))", category: "WorkspaceManager")
+        Logger.podoSojuKit.info("🎯 Selecting workspace: '\(workspace.settings.name)'", category: "WorkspaceManager")
+        Logger.podoSojuKit.debug("Workspace URL: \(workspace.url.path(percentEncoded: false))", category: "WorkspaceManager")
 
         currentWorkspace = workspace
-        Logger.sojuKit.debug("✅ currentWorkspace updated", category: "WorkspaceManager")
+        Logger.podoSojuKit.debug("✅ currentWorkspace updated", category: "WorkspaceManager")
 
         // Get Wine environment variables
         let env = workspace.wineEnvironment()
-        Logger.sojuKit.debug("🌍 Wine environment variables:", category: "WorkspaceManager")
+        Logger.podoSojuKit.debug("🌍 Wine environment variables:", category: "WorkspaceManager")
 
         // Log Wine-related environment variables
         for (key, value) in env.sorted(by: { $0.key < $1.key }) {
             if key.starts(with: "WINE") || key == "WINEPREFIX" {
-                Logger.sojuKit.debug("  \(key)=\(value)", category: "WorkspaceManager")
+                Logger.podoSojuKit.debug("  \(key)=\(value)", category: "WorkspaceManager")
             }
         }
 
-        Logger.sojuKit.info("🚀 Ready to launch programs in workspace", category: "WorkspaceManager")
+        Logger.podoSojuKit.info("🚀 Ready to launch programs in workspace", category: "WorkspaceManager")
     }
 
     // MARK: - Program Management
@@ -222,7 +222,7 @@ public class WorkspaceManager: ObservableObject {
     /// Refresh programs list for a workspace
     public func refreshPrograms(for workspace: Workspace) async {
         // Placeholder for program scanning logic
-        Logger.sojuKit.info("Would scan programs for workspace: \(workspace.settings.name)")
+        Logger.podoSojuKit.info("Would scan programs for workspace: \(workspace.settings.name)")
     }
 
     /// Pin a program to workspace

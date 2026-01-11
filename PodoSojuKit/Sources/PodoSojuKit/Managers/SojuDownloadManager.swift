@@ -1,6 +1,6 @@
 //
 //  SojuDownloadManager.swift
-//  SojuKit
+//  PodoSojuKit
 //
 //  Created on 2026-01-09.
 //
@@ -110,17 +110,17 @@ public final class SojuDownloadManager: ObservableObject {
             // 현재 버전과 비교
             if let current = currentVersion {
                 if release.version != current {
-                    Logger.sojuKit.info("Update available: \(current) -> \(release.version)", category: "Download")
+                    Logger.podoSojuKit.info("Update available: \(current) -> \(release.version)", category: "Download")
                     state = .idle
                     return release
                 } else {
-                    Logger.sojuKit.info("Already up to date: \(current)", category: "Download")
+                    Logger.podoSojuKit.info("Already up to date: \(current)", category: "Download")
                     state = .idle
                     return nil
                 }
             } else {
                 // 설치 안됨
-                Logger.sojuKit.info("Soju not installed, latest version: \(release.version)", category: "Download")
+                Logger.podoSojuKit.info("Soju not installed, latest version: \(release.version)", category: "Download")
                 state = .idle
                 return release
             }
@@ -150,7 +150,7 @@ public final class SojuDownloadManager: ObservableObject {
             throw DownloadError.noCompatibleAsset
         }
 
-        Logger.sojuKit.info("Starting download: \(asset.name) (\(asset.formattedSize))", category: "Download")
+        Logger.podoSojuKit.info("Starting download: \(asset.name) (\(asset.formattedSize))", category: "Download")
 
         // 다운로드 시작
         state = .downloading(progress: 0)
@@ -165,7 +165,7 @@ public final class SojuDownloadManager: ObservableObject {
         // 완료
         currentVersion = release.version
         state = .completed
-        Logger.sojuKit.info("Soju \(release.version) installed successfully", category: "Download")
+        Logger.podoSojuKit.info("Soju \(release.version) installed successfully", category: "Download")
     }
 
     /// 다운로드 취소
@@ -176,7 +176,7 @@ public final class SojuDownloadManager: ObservableObject {
         progressObservation = nil
         state = .idle
         downloadProgress = 0
-        Logger.sojuKit.info("Download cancelled", category: "Download")
+        Logger.podoSojuKit.info("Download cancelled", category: "Download")
     }
 
     /// 설치 여부 확인
@@ -215,7 +215,12 @@ public final class SojuDownloadManager: ObservableObject {
         decoder.dateDecodingStrategy = .iso8601
         let releases = try decoder.decode([GitHubRelease].self, from: data)
 
-        guard let latestRelease = releases.first else {
+        // publishedAt 기준 내림차순 정렬 (최신순)
+        let sorted = releases.sorted {
+            ($0.publishedAt ?? .distantPast) > ($1.publishedAt ?? .distantPast)
+        }
+
+        guard let latestRelease = sorted.first else {
             throw DownloadError.noReleaseFound
         }
 
@@ -311,7 +316,7 @@ public final class SojuDownloadManager: ObservableObject {
         // 임시 파일 정리
         try? FileManager.default.removeItem(at: archiveURL)
 
-        Logger.sojuKit.info("Soju extracted to \(sojuPath.path)", category: "Download")
+        Logger.podoSojuKit.info("Soju extracted to \(sojuPath.path)", category: "Download")
     }
 
     /// 현재 설치된 버전 로드

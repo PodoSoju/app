@@ -75,8 +75,8 @@ struct WorkspaceCreationView: View {
     }
 
     private func createWorkspace() {
-        Logger.sojuKit.info("🏗️ User initiated workspace creation", category: "UI")
-        Logger.sojuKit.debug("Name: '\(name)', Icon: '\(icon)', Windows: '\(windowsVersion)'", category: "UI")
+        Logger.podoSojuKit.info("🏗️ User initiated workspace creation", category: "UI")
+        Logger.podoSojuKit.debug("Name: '\(name)', Icon: '\(icon)', Windows: '\(windowsVersion)'", category: "UI")
 
         isCreating = true
         errorMessage = nil
@@ -90,12 +90,12 @@ struct WorkspaceCreationView: View {
                 )
 
                 await MainActor.run {
-                    Logger.sojuKit.info("✅ Workspace creation successful, dismissing modal", category: "UI")
+                    Logger.podoSojuKit.info("✅ Workspace creation successful, dismissing modal", category: "UI")
                     dismiss()
                 }
             } catch {
                 await MainActor.run {
-                    Logger.sojuKit.error("❌ Workspace creation failed: \(error.localizedDescription)", category: "UI")
+                    Logger.podoSojuKit.error("❌ Workspace creation failed: \(error.localizedDescription)", category: "UI")
                     errorMessage = "Failed to create workspace: \(error.localizedDescription)"
                     isCreating = false
                 }

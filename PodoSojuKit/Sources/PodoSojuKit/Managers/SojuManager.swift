@@ -1,12 +1,13 @@
 //
 //  SojuManager.swift
-//  SojuKit
+//  PodoSojuKit
 //
 //  Created on 2026-01-07.
 //
 
 import Foundation
 import os.log
+import CoreGraphics
 
 /// Soju (Wine alternative) 관리자
 /// - Soju 바이너리 경로 관리
@@ -38,6 +39,9 @@ public final class SojuManager: @unchecked Sendable {
     /// wineboot 바이너리 경로
     public let winebootBinary: URL
 
+    /// winetricks 스크립트 경로
+    public let winetricksBinary: URL
+
     /// Soju 버전 정보
     public private(set) var version: SojuVersion?
 
@@ -53,10 +57,11 @@ public final class SojuManager: @unchecked Sendable {
             fatalError("Cannot access Application Support directory")
         }
 
-        let bundleId = Bundle.main.bundleIdentifier ?? "com.podosoju.app"
+        // Soju (Wine packaging) is always installed under com.soju.app
+        let sojuBundleId = "com.soju.app"
 
         self.sojuRoot = appSupport
-            .appending(path: bundleId)
+            .appending(path: sojuBundleId)
             .appending(path: "Libraries")
             .appending(path: "Soju")
 
@@ -65,17 +70,18 @@ public final class SojuManager: @unchecked Sendable {
         self.wineBinary = binFolder.appending(path: "wine")
         self.wineserverBinary = binFolder.appending(path: "wineserver")
         self.winebootBinary = binFolder.appending(path: "wineboot")
+        self.winetricksBinary = binFolder.appending(path: "winetricks")
 
 
         // Debug logging
-        Logger.sojuKit.info("🏠 App Support: \(appSupport.path)", category: "Soju")
-        Logger.sojuKit.info("🍇 Soju root: \(sojuRoot.path)", category: "Soju")
-        Logger.sojuKit.info("🍷 Wine binary: \(wineBinary.path)", category: "Soju")
+        Logger.podoSojuKit.info("🏠 App Support: \(appSupport.path)", category: "Soju")
+        Logger.podoSojuKit.info("🍇 Soju root: \(sojuRoot.path)", category: "Soju")
+        Logger.podoSojuKit.info("🍷 Wine binary: \(wineBinary.path)", category: "Soju")
 
         // Check if files exist
         let wineExists = FileManager.default.fileExists(atPath: wineBinary.path)
         let isExecutable = FileManager.default.isExecutableFile(atPath: wineBinary.path)
-        Logger.sojuKit.info("✅ Wine exists: \(wineExists), executable: \(isExecutable)", category: "Soju")
+        Logger.podoSojuKit.info("✅ Wine exists: \(wineExists), executable: \(isExecutable)", category: "Soju")
 
         // 버전 정보 로드
         self.version = loadVersion()
@@ -89,7 +95,7 @@ public final class SojuManager: @unchecked Sendable {
             .appending(path: "SojuVersion.plist")
 
         guard FileManager.default.fileExists(atPath: versionPlistURL.path) else {
-            Logger.sojuKit.warning("SojuVersion.plist not found at \(versionPlistURL.path)")
+            Logger.podoSojuKit.warning("SojuVersion.plist not found at \(versionPlistURL.path)")
             return nil
         }
 
@@ -99,7 +105,7 @@ public final class SojuManager: @unchecked Sendable {
             let versionDict = try decoder.decode([String: SojuVersion].self, from: data)
             return versionDict["version"]
         } catch {
-            Logger.sojuKit.error("Failed to load Soju version: \(error)")
+            Logger.podoSojuKit.error("Failed to load Soju version: \(error)")
             return nil
         }
     }
@@ -138,17 +144,28 @@ public final class SojuManager: @unchecked Sendable {
         // WINEPREFIX 설정
         env["WINEPREFIX"] = workspace.winePrefixPath
 
+        // WINEDLLPATH 설정 (시스템 DLL 검색 경로)
+        let wineDllPath = [
+            libFolder.appending(path: "wine/x86_64-windows").path,
+            libFolder.appending(path: "wine/i386-windows").path
+        ].joined(separator: ":")
+        env["WINEDLLPATH"] = wineDllPath
+
+        // DYLD_FALLBACK_LIBRARY_PATH 설정 (동적 라이브러리 검색 경로)
+        // Wine이 FreeType, gnutls 등을 dlopen으로 로드할 때 필요
+        env["DYLD_FALLBACK_LIBRARY_PATH"] = libFolder.path
+
         // TMPDIR 설정 (샌드박스 호환성)
         // Wine이 /tmp 대신 컨테이너 내부 임시 디렉토리 사용하도록 설정
         let containerTmp = FileManager.default.temporaryDirectory.path
         env["TMPDIR"] = containerTmp
-        Logger.sojuKit.debug("TMPDIR set to: \(containerTmp)", category: "Soju")
+        Logger.podoSojuKit.debug("TMPDIR set to: \(containerTmp)", category: "Soju")
 
         // Wine 디버그 출력 설정
         #if DEBUG
         // Debug 빌드: 상세한 디버그 출력
         env["WINEDEBUG"] = "+all"
-        Logger.sojuKit.debug("Wine debug mode enabled: +all", category: "Soju")
+        Logger.podoSojuKit.debug("Wine debug mode enabled: +all", category: "Soju")
         #else
         // Release 빌드: 경고만 표시 (fixme 제외)
         env["WINEDEBUG"] = "warn+all,fixme-all"
@@ -183,10 +200,10 @@ public final class SojuManager: @unchecked Sendable {
     ) throws -> AsyncStream<ProcessOutput> {
         try validate()
 
-        Logger.sojuKit.info("🍷 Running Wine with args: \(args.joined(separator: " "))", category: "Soju")
-        Logger.sojuKit.debug("Wine binary: \(wineBinary.path(percentEncoded: false))", category: "Soju")
-        Logger.sojuKit.debug("Working directory: \(workspace.url.path(percentEncoded: false))", category: "Soju")
-        Logger.sojuKit.debug("Capture output: \(captureOutput)", category: "Soju")
+        Logger.podoSojuKit.info("🍷 Running Wine with args: \(args.joined(separator: " "))", category: "Soju")
+        Logger.podoSojuKit.debug("Wine binary: \(wineBinary.path(percentEncoded: false))", category: "Soju")
+        Logger.podoSojuKit.debug("Working directory: \(workspace.url.path(percentEncoded: false))", category: "Soju")
+        Logger.podoSojuKit.debug("Capture output: \(captureOutput)", category: "Soju")
 
         let process = Process()
         process.executableURL = wineBinary
@@ -197,24 +214,24 @@ public final class SojuManager: @unchecked Sendable {
 
         if captureOutput {
             // 기존 runStream() 사용
-            Logger.sojuKit.info("🚀 Starting Wine process with output capture...", category: "Soju")
+            Logger.podoSojuKit.info("🚀 Starting Wine process with output capture...", category: "Soju")
             return try process.runStream(name: args.joined(separator: " "))
         } else {
             // GUI 모드: 파이프 없이 직접 실행
             process.standardOutput = nil
             process.standardError = nil
-            Logger.sojuKit.info("🎨 GUI mode: running without pipes", category: "Soju")
+            Logger.podoSojuKit.info("🎨 GUI mode: running without pipes", category: "Soju")
 
             return AsyncStream { continuation in
                 Task {
                     continuation.yield(.started)
                     do {
                         try process.run()
-                        Logger.sojuKit.info("🚀 Wine process started (GUI mode)", category: "Soju")
+                        Logger.podoSojuKit.info("🚀 Wine process started (GUI mode)", category: "Soju")
                         // GUI 앱은 fork 후 바로 반환되므로 기다리지 않음
                         continuation.yield(.terminated(0))
                     } catch {
-                        Logger.sojuKit.error("💥 Wine process failed: \(error)", category: "Soju")
+                        Logger.podoSojuKit.error("💥 Wine process failed: \(error)", category: "Soju")
                         continuation.yield(.terminated(-1))
                     }
                     continuation.finish()
@@ -228,7 +245,7 @@ public final class SojuManager: @unchecked Sendable {
     public func runWineboot(workspace: Workspace) async throws {
         try validate()
 
-        Logger.sojuKit.info("Initializing Wine prefix at \(workspace.winePrefixPath)")
+        Logger.podoSojuKit.info("Initializing Wine prefix at \(workspace.winePrefixPath)")
 
         let process = Process()
         process.executableURL = winebootBinary
@@ -243,9 +260,9 @@ public final class SojuManager: @unchecked Sendable {
 
         do {
             try process.run()
-            Logger.sojuKit.info("wineboot process started in background")
+            Logger.podoSojuKit.info("wineboot process started in background")
         } catch {
-            Logger.sojuKit.error("Failed to start wineboot: \(error.localizedDescription)")
+            Logger.podoSojuKit.error("Failed to start wineboot: \(error.localizedDescription)")
             throw SojuError.winebootFailed(-1)
         }
 
@@ -256,7 +273,7 @@ public final class SojuManager: @unchecked Sendable {
 
         while attempts < maxAttempts {
             if FileManager.default.fileExists(atPath: driveCPath) {
-                Logger.sojuKit.info("Wine prefix initialized successfully (drive_c created)")
+                Logger.podoSojuKit.info("Wine prefix initialized successfully (drive_c created)")
                 return
             }
 
@@ -265,7 +282,7 @@ public final class SojuManager: @unchecked Sendable {
         }
 
         // 타임아웃 후에도 drive_c가 없으면 실패
-        Logger.sojuKit.error("wineboot timeout: drive_c directory not created after 10 seconds")
+        Logger.podoSojuKit.error("wineboot timeout: drive_c directory not created after 10 seconds")
         throw SojuError.winebootFailed(-1)
     }
 
@@ -287,6 +304,45 @@ public final class SojuManager: @unchecked Sendable {
         process.qualityOfService = .userInitiated
 
         return try process.runStream(name: "wineserver " + args.joined(separator: " "))
+    }
+
+    /// winetricks 실행
+    /// - Parameters:
+    ///   - workspace: 대상 Workspace
+    ///   - component: 설치할 컴포넌트 (예: "vcrun2019", "d3dx9")
+    public func runWinetricks(
+        workspace: Workspace,
+        component: String
+    ) async throws {
+        try validate()
+
+        guard FileManager.default.fileExists(atPath: winetricksBinary.path) else {
+            throw SojuError.winetricksNotFound
+        }
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/bash")
+        process.arguments = [winetricksBinary.path, "-q", component]
+        process.currentDirectoryURL = workspace.url
+        process.environment = constructEnvironment(for: workspace)
+        process.qualityOfService = .userInitiated
+
+        Logger.podoSojuKit.info("🔧 Running winetricks: \(component)", category: "Soju")
+
+        for await output in try process.runStream(name: "winetricks \(component)") {
+            switch output {
+            case .message(let message):
+                Logger.podoSojuKit.debug("winetricks: \(message)", category: "Soju")
+            case .terminated(let code):
+                if code != 0 {
+                    throw SojuError.winetricksFailed(code)
+                }
+            case .started, .error:
+                break
+            }
+        }
+
+        Logger.podoSojuKit.info("✅ winetricks \(component) completed", category: "Soju")
     }
 
     /// Soju 버전 확인
@@ -341,7 +397,7 @@ public final class SojuManager: @unchecked Sendable {
             throw SojuError.pathConversionFailed(unixPath)
         }
 
-        Logger.sojuKit.debug("Path converted: \(unixPath) -> \(windowsPath)", category: "Soju")
+        Logger.podoSojuKit.debug("Path converted: \(unixPath) -> \(windowsPath)", category: "Soju")
         return windowsPath
     }
 
@@ -358,7 +414,7 @@ public final class SojuManager: @unchecked Sendable {
         // wineboot --init 실행
         try await runWineboot(workspace: workspace)
 
-        Logger.sojuKit.info("Workspace initialized at \(workspace.winePrefixPath)")
+        Logger.podoSojuKit.info("Workspace initialized at \(workspace.winePrefixPath)")
     }
 
     // MARK: - GPTK Detection and D3DMetal Installation
@@ -416,7 +472,7 @@ public final class SojuManager: @unchecked Sendable {
         // 복사
         try FileManager.default.copyItem(at: gptkD3DMetalPath, to: destPath)
 
-        Logger.sojuKit.info("D3DMetal.framework installed from GPTK", category: "Soju")
+        Logger.podoSojuKit.info("D3DMetal.framework installed from GPTK", category: "Soju")
         return destPath
     }
 
@@ -431,7 +487,7 @@ public final class SojuManager: @unchecked Sendable {
         let d3dmetalPath = libFolder.appending(path: "external").appending(path: "D3DMetal.framework")
         if FileManager.default.fileExists(atPath: d3dmetalPath.path) {
             try FileManager.default.removeItem(at: d3dmetalPath)
-            Logger.sojuKit.info("D3DMetal.framework removed", category: "Soju")
+            Logger.podoSojuKit.info("D3DMetal.framework removed", category: "Soju")
         }
     }
 
@@ -474,9 +530,9 @@ public final class SojuManager: @unchecked Sendable {
                 do {
                     try FileManager.default.copyItem(at: source, to: dest)
                     installedCount += 1
-                    Logger.sojuKit.debug("Installed base font: \(font.name)", category: "Soju")
+                    Logger.podoSojuKit.debug("Installed base font: \(font.name)", category: "Soju")
                 } catch {
-                    Logger.sojuKit.warning("Failed to copy \(font.name): \(error.localizedDescription)", category: "Soju")
+                    Logger.podoSojuKit.warning("Failed to copy \(font.name): \(error.localizedDescription)", category: "Soju")
                 }
             }
         }
@@ -493,7 +549,7 @@ public final class SojuManager: @unchecked Sendable {
 
             // Skip if already installed
             if FileManager.default.fileExists(atPath: dest.path) {
-                Logger.sojuKit.debug("Font already exists: \(fontName)", category: "Soju")
+                Logger.podoSojuKit.debug("Font already exists: \(fontName)", category: "Soju")
                 continue
             }
 
@@ -502,12 +558,12 @@ public final class SojuManager: @unchecked Sendable {
                 do {
                     try FileManager.default.copyItem(at: source, to: dest)
                     installedCount += 1
-                    Logger.sojuKit.debug("Installed font: \(fontName)", category: "Soju")
+                    Logger.podoSojuKit.debug("Installed font: \(fontName)", category: "Soju")
                 } catch {
-                    Logger.sojuKit.warning("Failed to copy font \(fontName): \(error.localizedDescription)", category: "Soju")
+                    Logger.podoSojuKit.warning("Failed to copy font \(fontName): \(error.localizedDescription)", category: "Soju")
                 }
             } else {
-                Logger.sojuKit.warning("System font not found: \(fontName)", category: "Soju")
+                Logger.podoSojuKit.warning("System font not found: \(fontName)", category: "Soju")
             }
         }
 
@@ -522,9 +578,9 @@ public final class SojuManager: @unchecked Sendable {
             do {
                 try FileManager.default.copyItem(at: msyhSource, to: msyhDest)
                 installedCount += 1
-                Logger.sojuKit.info("Installed msyh.ttf from Soju", category: "Soju")
+                Logger.podoSojuKit.info("Installed msyh.ttf from Soju", category: "Soju")
             } catch {
-                Logger.sojuKit.warning("Failed to copy msyh.ttf: \(error.localizedDescription)", category: "Soju")
+                Logger.podoSojuKit.warning("Failed to copy msyh.ttf: \(error.localizedDescription)", category: "Soju")
             }
         }
 
@@ -536,16 +592,16 @@ public final class SojuManager: @unchecked Sendable {
             do {
                 try FileManager.default.copyItem(at: gulimSource, to: gulimDest)
                 installedCount += 1
-                Logger.sojuKit.info("Installed GULIM.TTC from Soju", category: "Soju")
+                Logger.podoSojuKit.info("Installed GULIM.TTC from Soju", category: "Soju")
             } catch {
-                Logger.sojuKit.warning("Failed to copy GULIM.TTC: \(error.localizedDescription)", category: "Soju")
+                Logger.podoSojuKit.warning("Failed to copy GULIM.TTC: \(error.localizedDescription)", category: "Soju")
             }
         }
 
         if installedCount > 0 {
-            Logger.sojuKit.info("CJK fonts installed: \(installedCount) fonts", category: "Soju")
+            Logger.podoSojuKit.info("CJK fonts installed: \(installedCount) fonts", category: "Soju")
         } else {
-            Logger.sojuKit.debug("No new CJK fonts to install", category: "Soju")
+            Logger.podoSojuKit.debug("No new CJK fonts to install", category: "Soju")
         }
     }
 
@@ -597,16 +653,26 @@ public final class SojuManager: @unchecked Sendable {
     /// 모든 Wine 관련 프로세스 종료
     /// 앱 종료 시 호출하여 orphan 프로세스 방지
     public func killAllWineProcesses() {
-        Logger.sojuKit.info("🧹 killAllWineProcesses() called", category: "Soju")
+        Logger.podoSojuKit.info("🧹 killAllWineProcesses() called", category: "Soju")
 
-        // 1. Windows 프로세스 강제 종료 (C:\ 경로로 실행된 프로세스)
-        Logger.sojuKit.debug("Killing Windows processes...", category: "Soju")
+        // 1. CGWindowList에서 Wine 창 소유자 PID 찾아서 직접 종료 (좀비 방지)
+        Logger.podoSojuKit.debug("Killing Wine window owners...", category: "Soju")
+        killWineWindowOwners()
+
+        // 2. Windows 프로세스 강제 종료 (C:\ 경로로 실행된 프로세스)
+        Logger.podoSojuKit.debug("Killing Windows processes...", category: "Soju")
         forceKillProcess(pattern: "C:\\\\Program")
         forceKillProcess(pattern: "C:\\\\windows")
         forceKillProcess(pattern: "C:\\\\users")
 
-        // 2. Wine 관련 프로세스 강제 종료
-        Logger.sojuKit.debug("Killing Wine processes...", category: "Soju")
+        // 3. macOS 경로로 실행된 portable exe 종료
+        Logger.podoSojuKit.debug("Killing portable exe processes...", category: "Soju")
+        forceKillProcess(pattern: "/unix/")  // Wine이 macOS 경로를 /unix/로 참조
+        forceKillProcess(pattern: "start /unix")  // wine start /unix 명령
+        forceKillProcess(pattern: "com.podosoju.app")  // Programs 폴더 내 exe
+
+        // 4. Wine 관련 프로세스 강제 종료
+        Logger.podoSojuKit.debug("Killing Wine processes...", category: "Soju")
         forceKillProcess(pattern: "wineserver")
         forceKillProcess(pattern: "wine64")
         forceKillProcess(pattern: "winedevice")
@@ -616,7 +682,30 @@ public final class SojuManager: @unchecked Sendable {
         forceKillProcess(pattern: "rpcss.exe")
         forceKillProcess(pattern: "explorer.exe")
 
-        Logger.sojuKit.info("✅ killAllWineProcesses() completed", category: "Soju")
+        Logger.podoSojuKit.info("✅ killAllWineProcesses() completed", category: "Soju")
+    }
+
+    /// CGWindowList에서 Wine 창 소유자를 찾아 종료
+    private func killWineWindowOwners() {
+        guard let windowList = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else {
+            return
+        }
+
+        var killedPIDs: Set<pid_t> = []
+
+        for window in windowList {
+            guard let ownerName = window[kCGWindowOwnerName as String] as? String,
+                  let ownerPID = window[kCGWindowOwnerPID as String] as? pid_t else {
+                continue
+            }
+
+            // Wine 관련 창 찾기
+            if ownerName.lowercased().contains("wine") && !killedPIDs.contains(ownerPID) {
+                Logger.podoSojuKit.debug("Killing Wine window owner: \(ownerName) (PID: \(ownerPID))", category: "Soju")
+                kill(ownerPID, SIGKILL)
+                killedPIDs.insert(ownerPID)
+            }
+        }
     }
 
     /// 프로세스 강제 종료 (SIGKILL)
@@ -631,9 +720,9 @@ public final class SojuManager: @unchecked Sendable {
             try process.run()
             process.waitUntilExit()
             let status = process.terminationStatus
-            Logger.sojuKit.debug("pkill -9 -f '\(pattern)' → exit \(status)", category: "Soju")
+            Logger.podoSojuKit.debug("pkill -9 -f '\(pattern)' → exit \(status)", category: "Soju")
         } catch {
-            Logger.sojuKit.error("pkill failed for '\(pattern)': \(error)", category: "Soju")
+            Logger.podoSojuKit.error("pkill failed for '\(pattern)': \(error)", category: "Soju")
         }
     }
 
@@ -653,11 +742,11 @@ public final class SojuManager: @unchecked Sendable {
             process.waitUntilExit()
 
             if process.terminationStatus == 0 {
-                Logger.sojuKit.debug("Killed processes matching '\(name)'", category: "Soju")
+                Logger.podoSojuKit.debug("Killed processes matching '\(name)'", category: "Soju")
             }
         } catch {
             // pkill 실패는 무시 (프로세스가 없는 경우 등)
-            Logger.sojuKit.debug("No processes matching '\(name)' to kill", category: "Soju")
+            Logger.podoSojuKit.debug("No processes matching '\(name)' to kill", category: "Soju")
         }
     }
 }
@@ -691,6 +780,8 @@ public enum SojuError: LocalizedError {
     case notExecutable(String)
     case winebootFailed(Int32)
     case pathConversionFailed(String)
+    case winetricksNotFound
+    case winetricksFailed(Int32)
 
     public var errorDescription: String? {
         switch self {
@@ -702,6 +793,10 @@ public enum SojuError: LocalizedError {
             return "wineboot failed with exit code \(code)"
         case .pathConversionFailed(let path):
             return "Failed to convert path to Windows format: \(path)"
+        case .winetricksNotFound:
+            return "winetricks not found in Soju installation."
+        case .winetricksFailed(let code):
+            return "winetricks failed with exit code \(code)"
         }
     }
 }
@@ -744,7 +839,7 @@ extension Process {
                 do {
                     try self.run()
                 } catch {
-                    Logger.sojuKit.error("Failed to start process: \(error.localizedDescription)", category: "Process")
+                    Logger.podoSojuKit.error("Failed to start process: \(error.localizedDescription)", category: "Process")
                     continuation.yield(.terminated(-1))
                     continuation.finish()
                     return
@@ -756,12 +851,12 @@ extension Process {
                     group.addTask {
                         do {
                             for try await line in stdoutPipe.fileHandleForReading.bytes.lines {
-                                Logger.sojuKit.debug("📤 stdout: \(line)", category: "Process")
+                                Logger.podoSojuKit.debug("📤 stdout: \(line)", category: "Process")
                                 continuation.yield(.message(line))
                                 fileHandle?.write(Data((line + "\n").utf8))
                             }
                         } catch {
-                            Logger.sojuKit.error("Error reading stdout: \(error.localizedDescription)", category: "Process")
+                            Logger.podoSojuKit.error("Error reading stdout: \(error.localizedDescription)", category: "Process")
                         }
                     }
 
@@ -769,12 +864,12 @@ extension Process {
                     group.addTask {
                         do {
                             for try await line in stderrPipe.fileHandleForReading.bytes.lines {
-                                Logger.sojuKit.debug("📤 stderr: \(line)", category: "Process")
+                                Logger.podoSojuKit.debug("📤 stderr: \(line)", category: "Process")
                                 continuation.yield(.error(line))
                                 fileHandle?.write(Data(("[ERROR] " + line + "\n").utf8))
                             }
                         } catch {
-                            Logger.sojuKit.error("Error reading stderr: \(error.localizedDescription)", category: "Process")
+                            Logger.podoSojuKit.error("Error reading stderr: \(error.localizedDescription)", category: "Process")
                         }
                     }
 
@@ -788,7 +883,7 @@ extension Process {
                 }
 
                 // Only send terminated after all output is read
-                Logger.sojuKit.info("Process '\(name)' terminated with code \(self.terminationStatus)", category: "Process")
+                Logger.podoSojuKit.info("Process '\(name)' terminated with code \(self.terminationStatus)", category: "Process")
                 continuation.yield(.terminated(self.terminationStatus))
                 continuation.finish()
             }
