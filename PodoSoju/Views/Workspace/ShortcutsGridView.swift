@@ -127,21 +127,28 @@ struct ShortcutsGridView: View {
             let discoveredShortcuts = await scanDesktopFolders()
             Logger.podoSojuKit.debug("Found \(discoveredShortcuts.count) shortcuts from Desktop folders", category: "UI")
 
-            // 2. Convert pinnedPrograms to DesktopIcon (with icon lookup)
-            let pinnedIcons = workspace.settings.pinnedPrograms.compactMap { pinned -> DesktopIcon? in
+            // 2. Convert pinnedPrograms to DesktopIcon (with icon lookup/extraction)
+            var pinnedIcons: [DesktopIcon] = []
+            for pinned in workspace.settings.pinnedPrograms {
                 guard let url = pinned.url else {
                     Logger.podoSojuKit.warning("Skipping pinned program '\(pinned.name)' - no URL", category: "UI")
-                    return nil
+                    continue
                 }
                 Logger.podoSojuKit.debug("Adding pinned program: \(pinned.name) -> \(url.path)", category: "UI")
-                let iconURL = IconManager.shared.getIconURL(for: url, in: workspace.url)
-                return DesktopIcon(
+
+                // Check for existing icon, extract if missing
+                var iconURL = IconManager.shared.getIconURL(for: url, in: workspace.url)
+                if iconURL == nil {
+                    iconURL = await IconManager.shared.extractIcon(from: url, in: workspace.url)
+                }
+
+                pinnedIcons.append(DesktopIcon(
                     id: pinned.id,
                     name: pinned.name,
                     url: url,
                     iconImage: iconForProgram(name: pinned.name),
                     iconURL: iconURL
-                )
+                ))
             }
             Logger.podoSojuKit.debug("Found \(pinnedIcons.count) pinned programs", category: "UI")
 
@@ -231,7 +238,12 @@ struct ShortcutsGridView: View {
 
                 seenNames.insert(name.lowercased())
 
-                let iconURL = IconManager.shared.getIconURL(for: lnkURL, in: workspace.url)
+                // Check for existing icon, extract if missing
+                var iconURL = IconManager.shared.getIconURL(for: lnkURL, in: workspace.url)
+                if iconURL == nil {
+                    iconURL = await IconManager.shared.extractIcon(from: lnkURL, in: workspace.url)
+                }
+
                 let icon = DesktopIcon(
                     name: name,
                     url: lnkURL,
