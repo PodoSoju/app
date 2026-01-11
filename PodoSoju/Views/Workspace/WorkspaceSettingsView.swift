@@ -191,10 +191,18 @@ struct GraphicsSettingsTab: View {
 }
 
 // MARK: - Winetricks Tab
+
+/// Installation status for each component
+enum InstallStatus: Equatable {
+    case idle
+    case installing
+    case success
+    case failed(String)
+}
+
 struct WinetricksTab: View {
     @ObservedObject var workspace: Workspace
-    @State private var isInstalling = false
-    @State private var installStatus: String?
+    @State private var componentStatus: [String: InstallStatus] = [:]
 
     private let commonComponents = [
         ("vcrun2019", "Visual C++ 2015-2022"),
@@ -208,39 +216,22 @@ struct WinetricksTab: View {
         ("cjkfonts", "CJK Fonts (Korean/Japanese/Chinese)"),
     ]
 
+    /// Check if any component is currently installing
+    private var isAnyInstalling: Bool {
+        componentStatus.values.contains { $0 == .installing }
+    }
+
     var body: some View {
         Form {
             Section("Common Components") {
                 ForEach(commonComponents, id: \.0) { component in
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text(component.1)
-                                .font(.body)
-                            Text(component.0)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-
-                        Spacer()
-
-                        Button("Install") {
-                            installComponent(component.0)
-                        }
-                        .disabled(isInstalling)
-                    }
-                }
-            }
-
-            if let status = installStatus {
-                Section("Status") {
-                    HStack {
-                        if isInstalling {
-                            ProgressView()
-                                .scaleEffect(0.8)
-                        }
-                        Text(status)
-                            .foregroundColor(isInstalling ? .secondary : .green)
-                    }
+                    WinetricksComponentRow(
+                        componentId: component.0,
+                        componentName: component.1,
+                        status: componentStatus[component.0] ?? .idle,
+                        isDisabled: isAnyInstalling,
+                        onInstall: { installComponent(component.0) }
+                    )
                 }
             }
         }
@@ -248,8 +239,7 @@ struct WinetricksTab: View {
     }
 
     private func installComponent(_ component: String) {
-        isInstalling = true
-        installStatus = "Installing \(component)..."
+        componentStatus[component] = .installing
 
         Task {
             do {
@@ -258,14 +248,80 @@ struct WinetricksTab: View {
                     component: component
                 )
                 await MainActor.run {
-                    installStatus = "✓ \(component) installed successfully"
-                    isInstalling = false
+                    componentStatus[component] = .success
                 }
             } catch {
                 await MainActor.run {
-                    installStatus = "✗ Failed: \(error.localizedDescription)"
-                    isInstalling = false
+                    componentStatus[component] = .failed(error.localizedDescription)
                 }
+            }
+        }
+    }
+}
+
+/// Individual row for a winetricks component
+struct WinetricksComponentRow: View {
+    let componentId: String
+    let componentName: String
+    let status: InstallStatus
+    let isDisabled: Bool
+    let onInstall: () -> Void
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading) {
+                Text(componentName)
+                    .font(.body)
+                Text(componentId)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer()
+
+            // Status indicator
+            statusView
+
+            // Install button
+            Button("Install") {
+                onInstall()
+            }
+            .disabled(isDisabled || status == .installing)
+        }
+    }
+
+    @ViewBuilder
+    private var statusView: some View {
+        switch status {
+        case .idle:
+            EmptyView()
+        case .installing:
+            HStack(spacing: 4) {
+                ProgressView()
+                    .scaleEffect(0.7)
+                    .frame(width: 16, height: 16)
+                Text("Installing...")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        case .success:
+            HStack(spacing: 4) {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.green)
+                    .font(.system(size: 14))
+                Text("Installed")
+                    .font(.caption)
+                    .foregroundColor(.green)
+            }
+        case .failed(let message):
+            HStack(spacing: 4) {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundColor(.red)
+                    .font(.system(size: 14))
+                Text("Failed")
+                    .font(.caption)
+                    .foregroundColor(.red)
+                    .help(message)
             }
         }
     }
