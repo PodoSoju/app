@@ -81,9 +81,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             WineAppMonitor.shared.startMonitoring()
         }
 
-        // 메인 윈도우에 delegate 설정 + 중복 창 정리
+        // 메인 윈도우에 delegate 설정
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            self.ensureSingleMainWindow()
+            if let window = NSApp.windows.first(where: { $0.isVisible && $0.title != "Wine Logs" }) {
+                window.delegate = self
+            }
         }
 
         // SIGTERM 핸들러 - kill -15로 종료 시 Wine도 정리
@@ -129,9 +131,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
         Logger.podoSojuKit.info("Running: workspace=\(workspaceId), exe=\(exePath)", category: "URLHandler")
 
-        // 중복 창 정리
-        ensureSingleMainWindow()
-
         // Workspace 찾기 및 실행 (inline)
         // ~/Library/Containers/com.podosoju.app/Workspaces/
         let workspacesDir = FileManager.default.homeDirectoryForCurrentUser
@@ -170,42 +169,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         alert.informativeText = message
         alert.alertStyle = .warning
         alert.runModal()
-    }
-
-    /// 메인 창을 하나만 유지하고 나머지는 닫기
-    private func ensureSingleMainWindow() {
-        // visible 상태인 일반 창만 필터 (패널, 시트 제외)
-        let mainWindows = NSApp.windows.filter { window in
-            window.isVisible &&
-            !window.isSheet &&
-            !(window is NSPanel) &&
-            window.level == .normal
-        }
-
-        guard mainWindows.count > 1 else {
-            // 1개 이하면 그대로 유지
-            if let mainWindow = mainWindows.first {
-                mainWindow.delegate = self
-            }
-            return
-        }
-
-        // 가장 최근 창(key window 또는 첫 번째)만 남기고 닫기
-        let windowToKeep = NSApp.keyWindow ?? mainWindows.first!
-        var closedCount = 0
-
-        for window in mainWindows {
-            if window !== windowToKeep {
-                window.close()
-                closedCount += 1
-            }
-        }
-
-        if closedCount > 0 {
-            Logger.podoSojuKit.info("Closed \(closedCount) duplicate windows", category: "AppDelegate")
-        }
-
-        windowToKeep.delegate = self
     }
 
     /// 마지막 창이 닫히면 앱도 종료

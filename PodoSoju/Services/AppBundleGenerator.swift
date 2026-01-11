@@ -112,11 +112,22 @@ class AppBundleGenerator {
             throw GeneratorError.writePlistFailed(plistURL.path)
         }
 
-        // launcher 스크립트 생성 (open 명령으로 URL scheme 호출)
-        // -g: background에서 열기 (기존 앱에 URL 전달, 새 창 안 띄움)
+        // launcher 스크립트 생성
+        // PodoSoju가 이미 실행 중이면 URL만 전달, 아니면 실행
         let launcherScript = """
         #!/bin/bash
-        open -g "\(launchURL)"
+        URL="\(launchURL)"
+
+        # PodoSoju가 실행 중인지 확인
+        if pgrep -x "PodoSoju" > /dev/null; then
+            # 이미 실행 중 - URL만 전달
+            open "$URL"
+        else
+            # 실행 중 아님 - PodoSoju 먼저 실행하고 URL 전달
+            open -a "PodoSoju"
+            sleep 1
+            open "$URL"
+        fi
         """
 
         let launcherURL = macOSURL.appendingPathComponent("launcher")
