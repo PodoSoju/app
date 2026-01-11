@@ -62,10 +62,18 @@ struct ShortcutView: View {
             runProgram()
         }
         .contextMenu {
+            Button("Run", systemImage: "play.fill") {
+                runProgram()
+            }
+            Divider()
+            Button("Create App Bundle", systemImage: "app.badge.plus") {
+                createAppBundle()
+            }
             Button("Rename", systemImage: "pencil.line") {
                 // TODO: Implement rename functionality
                 Logger.podoSojuKit.debug("Rename requested for: \(shortcut.name)")
             }
+            Divider()
             Button(role: .destructive) {
                 showDeleteConfirmation = true
             } label: {
@@ -274,6 +282,61 @@ struct ShortcutView: View {
         }
 
         Logger.podoSojuKit.info("Deleted shortcut: \(shortcut.name)")
+    }
+
+    private func createAppBundle() {
+        Task {
+            do {
+                // .lnk에서 실제 exe 경로 추출
+                let exePath: String
+                if shortcut.url.pathExtension.lowercased() == "lnk" {
+                    if let targetURL = try? await ShortcutParser.parseShortcut(shortcut.url, winePrefixURL: workspace.winePrefixURL) {
+                        // Windows 경로로 변환
+                        exePath = targetURL.path.replacingOccurrences(of: workspace.winePrefixURL.path, with: "C:")
+                            .replacingOccurrences(of: "/", with: "\\")
+                    } else {
+                        throw NSError(domain: "ShortcutView", code: 1, userInfo: [NSLocalizedDescriptionKey: "Failed to parse .lnk file"])
+                    }
+                } else {
+                    // 직접 exe 경로
+                    exePath = shortcut.url.path.replacingOccurrences(of: workspace.winePrefixURL.path, with: "C:")
+                        .replacingOccurrences(of: "/", with: "\\")
+                }
+
+                // workspace ID 추출 (URL에서)
+                let workspaceId = workspace.url.lastPathComponent
+
+                // 앱 번들 생성
+                let appURL = try AppBundleGenerator.createAppBundle(
+                    name: shortcut.name,
+                    workspaceId: workspaceId,
+                    exePath: exePath,
+                    icon: nil  // TODO: 아이콘 추출
+                )
+
+                // 성공 알럿
+                await MainActor.run {
+                    let alert = NSAlert()
+                    alert.messageText = "App Bundle Created"
+                    alert.informativeText = "'\(shortcut.name).app' has been created in ~/Applications.\n\nYou can add it to your Dock or Launchpad."
+                    alert.alertStyle = .informational
+                    alert.addButton(withTitle: "Open in Finder")
+                    alert.addButton(withTitle: "OK")
+
+                    let response = alert.runModal()
+                    if response == .alertFirstButtonReturn {
+                        NSWorkspace.shared.activateFileViewerSelecting([appURL])
+                    }
+                }
+
+                Logger.podoSojuKit.info("Created app bundle for: \(shortcut.name)", category: "ShortcutView")
+            } catch {
+                await MainActor.run {
+                    errorMessage = "Failed to create app bundle: \(error.localizedDescription)"
+                    showError = true
+                }
+            }
+        }
     }
 }
 

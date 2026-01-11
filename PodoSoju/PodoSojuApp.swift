@@ -89,6 +89,76 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
     }
 
+    /// URL scheme 핸들러: podosoju://run/{workspace-id}/{encoded-exe-path}
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls {
+            handlePodoSojuURL(url)
+        }
+    }
+
+    private func handlePodoSojuURL(_ url: URL) {
+        guard url.scheme == "podosoju" else { return }
+
+        Logger.podoSojuKit.info("Received URL: \(url.absoluteString)", category: "URLHandler")
+
+        // podosoju://run/{workspace-id}/{encoded-exe-path}
+        let pathComponents = url.pathComponents.filter { $0 != "/" }
+
+        guard pathComponents.count >= 2,
+              pathComponents[0] == "run" else {
+            Logger.podoSojuKit.warning("Invalid URL format: \(url.absoluteString)", category: "URLHandler")
+            return
+        }
+
+        let workspaceId = pathComponents[1]
+        let encodedPath = pathComponents.dropFirst(2).joined(separator: "/")
+
+        guard let exePath = encodedPath.removingPercentEncoding else {
+            Logger.podoSojuKit.warning("Failed to decode exe path: \(encodedPath)", category: "URLHandler")
+            return
+        }
+
+        Logger.podoSojuKit.info("Running: workspace=\(workspaceId), exe=\(exePath)", category: "URLHandler")
+
+        // Workspace 찾기 및 실행 (inline)
+        let workspacesDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("com.podosoju.app/Workspaces")
+
+        let workspaceURL = workspacesDir.appendingPathComponent(workspaceId)
+
+        guard FileManager.default.fileExists(atPath: workspaceURL.path) else {
+            Logger.podoSojuKit.error("Workspace not found: \(workspaceId)", category: "URLHandler")
+            showAlert(title: "Workspace Not Found", message: "The workspace '\(workspaceId)' does not exist.")
+            return
+        }
+
+        let workspace = Workspace(workspaceUrl: workspaceURL)
+
+        do {
+            let stream = try SojuManager.shared.runWine(
+                args: [exePath],
+                workspace: workspace,
+                captureOutput: false
+            )
+            // GUI 모드 - 출력 무시
+            Task.detached {
+                for await _ in stream { }
+            }
+            Logger.podoSojuKit.info("Program launched via URL scheme: \(exePath)", category: "URLHandler")
+        } catch {
+            Logger.podoSojuKit.error("Failed to run program: \(error.localizedDescription)", category: "URLHandler")
+            showAlert(title: "Launch Failed", message: error.localizedDescription)
+        }
+    }
+
+    private func showAlert(title: String, message: String) {
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.informativeText = message
+        alert.alertStyle = .warning
+        alert.runModal()
+    }
+
     /// 마지막 창이 닫히면 앱도 종료
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         return true

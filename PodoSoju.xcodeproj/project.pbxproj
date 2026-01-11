@@ -26,6 +26,7 @@
 		OWS000012D3517B9063BA97B /* OpenWorkspacesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = OWS000022D3517B9063BA97B /* OpenWorkspacesStore.swift */; };
 		WAC000012D3517B9063BA97B /* WindowAccessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = WAC000022D3517B9063BA97B /* WindowAccessor.swift */; };
 		WAM000012D3517B9063BA97B /* WineAppMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = WAM000022D3517B9063BA97B /* WineAppMonitor.swift */; };
+		ABG000012D3517B9063BA97B /* AppBundleGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABG000022D3517B9063BA97B /* AppBundleGenerator.swift */; };
 		A10000007A000001 /* PodoSojuKit in Frameworks */ = {isa = PBXBuildFile; productRef = A10000008A000001 /* PodoSojuKit */; };
 /* End PBXBuildFile section */
 
@@ -49,6 +50,7 @@
 		OWS000022D3517B9063BA97B /* OpenWorkspacesStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PodoSoju/OpenWorkspacesStore.swift; sourceTree = SOURCE_ROOT; };
 		WAC000022D3517B9063BA97B /* WindowAccessor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PodoSoju/WindowAccessor.swift; sourceTree = SOURCE_ROOT; };
 		WAM000022D3517B9063BA97B /* WineAppMonitor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WineAppMonitor.swift; path = PodoSoju/Services/WineAppMonitor.swift; sourceTree = SOURCE_ROOT; };
+		ABG000022D3517B9063BA97B /* AppBundleGenerator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AppBundleGenerator.swift; path = PodoSoju/Services/AppBundleGenerator.swift; sourceTree = SOURCE_ROOT; };
 		A10000009A000001 /* PodoSoju.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PodoSoju.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1000000CA000001 /* PodoSojuKit */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = PodoSojuKit; path = PodoSojuKit; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -99,6 +101,7 @@
 		SVC000012D3517B9063BA97B /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				ABG000022D3517B9063BA97B /* AppBundleGenerator.swift */,
 				WAM000022D3517B9063BA97B /* WineAppMonitor.swift */,
 			);
 			name = Services;
@@ -255,6 +258,7 @@
 				OWS000012D3517B9063BA97B /* OpenWorkspacesStore.swift in Sources */,
 				WAC000012D3517B9063BA97B /* WindowAccessor.swift in Sources */,
 				WAM000012D3517B9063BA97B /* WineAppMonitor.swift in Sources */,
+				ABG000012D3517B9063BA97B /* AppBundleGenerator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
