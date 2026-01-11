@@ -326,7 +326,7 @@ public final class SojuManager: @unchecked Sendable {
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/bash")
-        process.arguments = [winetricksBinary.path, "-q", component]
+        process.arguments = [winetricksBinary.path, "-q", "--force", component]
         process.currentDirectoryURL = workspace.url
 
         // winetricks용 환경변수 설정
