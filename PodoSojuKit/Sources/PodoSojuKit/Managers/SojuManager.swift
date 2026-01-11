@@ -328,10 +328,19 @@ public final class SojuManager: @unchecked Sendable {
         process.executableURL = URL(fileURLWithPath: "/bin/bash")
         process.arguments = [winetricksBinary.path, "-q", component]
         process.currentDirectoryURL = workspace.url
-        process.environment = constructEnvironment(for: workspace)
+
+        // winetricks용 환경변수 설정
+        var env = constructEnvironment(for: workspace)
+        env["WINE"] = wineBinary.path
+        env["WINESERVER"] = wineserverBinary.path
+        env["PATH"] = "\(binFolder.path):" + (env["PATH"] ?? "/usr/bin:/bin")
+
+        process.environment = env
         process.qualityOfService = .userInitiated
 
         Logger.podoSojuKit.info("🔧 Running winetricks: \(component)", category: "Soju")
+        Logger.podoSojuKit.debug("WINE=\(wineBinary.path)", category: "Soju")
+        Logger.podoSojuKit.debug("WINESERVER=\(wineserverBinary.path)", category: "Soju")
 
         for await output in try process.runStream(name: "winetricks \(component)") {
             switch output {
