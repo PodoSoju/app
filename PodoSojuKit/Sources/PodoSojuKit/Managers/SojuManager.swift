@@ -996,30 +996,24 @@ extension Process {
 
                 // Use TaskGroup to ensure all output is read before termination
                 await withTaskGroup(of: Void.self) { group in
-                    // Read stdout
+                    // Read stdout - use custom line reader that handles \r (for wget progress)
                     group.addTask {
-                        do {
-                            for try await line in stdoutPipe.fileHandleForReading.bytes.lines {
-                                Logger.podoSojuKit.debug("📤 stdout: \(line)", category: "Process")
-                                continuation.yield(.message(line))
-                                fileHandle?.write(Data((line + "\n").utf8))
-                            }
-                        } catch {
-                            Logger.podoSojuKit.error("Error reading stdout: \(error.localizedDescription)", category: "Process")
-                        }
+                        await Self.readLines(
+                            from: stdoutPipe.fileHandleForReading,
+                            isError: false,
+                            continuation: continuation,
+                            fileHandle: fileHandle
+                        )
                     }
 
-                    // Read stderr
+                    // Read stderr - use custom line reader that handles \r (for wget progress)
                     group.addTask {
-                        do {
-                            for try await line in stderrPipe.fileHandleForReading.bytes.lines {
-                                Logger.podoSojuKit.debug("📤 stderr: \(line)", category: "Process")
-                                continuation.yield(.error(line))
-                                fileHandle?.write(Data(("[ERROR] " + line + "\n").utf8))
-                            }
-                        } catch {
-                            Logger.podoSojuKit.error("Error reading stderr: \(error.localizedDescription)", category: "Process")
-                        }
+                        await Self.readLines(
+                            from: stderrPipe.fileHandleForReading,
+                            isError: true,
+                            continuation: continuation,
+                            fileHandle: fileHandle
+                        )
                     }
 
                     // Wait for process to finish
@@ -1036,6 +1030,60 @@ extension Process {
                 continuation.yield(.terminated(self.terminationStatus))
                 continuation.finish()
             }
+        }
+    }
+
+    /// Read lines from file handle, treating both \r and \n as line separators
+    /// This is necessary for wget progress which uses \r to update the same line
+    private static func readLines(
+        from handle: FileHandle,
+        isError: Bool,
+        continuation: AsyncStream<ProcessOutput>.Continuation,
+        fileHandle: FileHandle?
+    ) async {
+        var buffer = Data()
+        let streamType = isError ? "stderr" : "stdout"
+
+        do {
+            for try await byte in handle.bytes {
+                // Check for line separators: \r (0x0D) or \n (0x0A)
+                if byte == 0x0D || byte == 0x0A {
+                    // Skip empty lines
+                    if buffer.isEmpty { continue }
+
+                    if let line = String(data: buffer, encoding: .utf8) {
+                        let trimmed = line.trimmingCharacters(in: .whitespaces)
+                        if !trimmed.isEmpty {
+                            Logger.podoSojuKit.debug("📤 \(streamType): \(trimmed)", category: "Process")
+                            if isError {
+                                continuation.yield(.error(trimmed))
+                                fileHandle?.write(Data(("[ERROR] " + trimmed + "\n").utf8))
+                            } else {
+                                continuation.yield(.message(trimmed))
+                                fileHandle?.write(Data((trimmed + "\n").utf8))
+                            }
+                        }
+                    }
+                    buffer.removeAll(keepingCapacity: true)
+                } else {
+                    buffer.append(byte)
+                }
+            }
+
+            // Handle any remaining data in buffer
+            if !buffer.isEmpty, let line = String(data: buffer, encoding: .utf8) {
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                if !trimmed.isEmpty {
+                    Logger.podoSojuKit.debug("📤 \(streamType): \(trimmed)", category: "Process")
+                    if isError {
+                        continuation.yield(.error(trimmed))
+                    } else {
+                        continuation.yield(.message(trimmed))
+                    }
+                }
+            }
+        } catch {
+            Logger.podoSojuKit.error("Error reading \(streamType): \(error.localizedDescription)", category: "Process")
         }
     }
 }
