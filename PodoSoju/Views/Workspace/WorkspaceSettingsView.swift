@@ -192,9 +192,10 @@ struct GraphicsSettingsTab: View {
 
 // MARK: - Winetricks Tab
 
-/// Installation status for each component
+/// Installation status for individual component
 enum InstallStatus: Equatable {
     case idle
+    case downloading(percent: Int)
     case installing
     case success
     case failed(String)
@@ -202,7 +203,9 @@ enum InstallStatus: Equatable {
 
 struct WinetricksTab: View {
     @ObservedObject var workspace: Workspace
-    @State private var componentStatus: [String: InstallStatus] = [:]
+
+    /// Per-component install status
+    @State private var componentStatuses: [String: InstallStatus] = [:]
 
     private let commonComponents = [
         ("vcrun2019", "Visual C++ 2015-2022"),
@@ -216,11 +219,6 @@ struct WinetricksTab: View {
         ("cjkfonts", "CJK Fonts (Korean/Japanese/Chinese)"),
     ]
 
-    /// Check if any component is currently installing
-    private var isAnyInstalling: Bool {
-        componentStatus.values.contains { $0 == .installing }
-    }
-
     var body: some View {
         Form {
             Section("Common Components") {
@@ -228,8 +226,7 @@ struct WinetricksTab: View {
                     WinetricksComponentRow(
                         componentId: component.0,
                         componentName: component.1,
-                        status: componentStatus[component.0] ?? .idle,
-                        isDisabled: isAnyInstalling,
+                        status: componentStatuses[component.0] ?? .idle,
                         onInstall: { installComponent(component.0) }
                     )
                 }
@@ -238,40 +235,69 @@ struct WinetricksTab: View {
         .formStyle(.grouped)
     }
 
-    private func installComponent(_ component: String) {
-        componentStatus[component] = .installing
+    private func installComponent(_ componentId: String) {
+        // Prevent re-installing if already in progress or succeeded
+        let currentStatus = componentStatuses[componentId] ?? .idle
+        switch currentStatus {
+        case .downloading, .installing, .success:
+            return
+        case .idle, .failed:
+            break
+        }
+
+        componentStatuses[componentId] = .downloading(percent: 0)
 
         Task {
             do {
                 try await SojuManager.shared.runWinetricks(
                     workspace: workspace,
-                    component: component
-                )
+                    component: componentId
+                ) { progress in
+                    Task { @MainActor in
+                        switch progress {
+                        case .downloading(let percent):
+                            componentStatuses[componentId] = .downloading(percent: percent)
+                        case .installing:
+                            componentStatuses[componentId] = .installing
+                        }
+                    }
+                }
+
                 await MainActor.run {
-                    componentStatus[component] = .success
+                    componentStatuses[componentId] = .success
                 }
             } catch {
                 await MainActor.run {
-                    componentStatus[component] = .failed(error.localizedDescription)
+                    componentStatuses[componentId] = .failed(error.localizedDescription)
                 }
             }
         }
     }
 }
 
-/// Individual row for a winetricks component
+/// Individual row for a winetricks component with independent install button
 struct WinetricksComponentRow: View {
     let componentId: String
     let componentName: String
     let status: InstallStatus
-    let isDisabled: Bool
     let onInstall: () -> Void
+
+    /// Check if install is in progress
+    private var isInstalling: Bool {
+        switch status {
+        case .downloading, .installing:
+            return true
+        default:
+            return false
+        }
+    }
 
     var body: some View {
         HStack {
             VStack(alignment: .leading) {
                 Text(componentName)
                     .font(.body)
+                    .foregroundColor(status == .success ? .secondary : .primary)
                 Text(componentId)
                     .font(.caption)
                     .foregroundColor(.secondary)
@@ -279,14 +305,8 @@ struct WinetricksComponentRow: View {
 
             Spacer()
 
-            // Status indicator
+            // Status / Install button
             statusView
-
-            // Install button
-            Button("Install") {
-                onInstall()
-            }
-            .disabled(isDisabled || status == .installing)
         }
     }
 
@@ -294,16 +314,34 @@ struct WinetricksComponentRow: View {
     private var statusView: some View {
         switch status {
         case .idle:
-            EmptyView()
-        case .installing:
-            HStack(spacing: 4) {
+            Button("Install") {
+                onInstall()
+            }
+            .buttonStyle(.bordered)
+
+        case .downloading(let percent):
+            HStack(spacing: 6) {
                 ProgressView()
                     .scaleEffect(0.7)
-                    .frame(width: 16, height: 16)
+                    .frame(width: 14, height: 14)
+                Text("Downloading \(percent)%")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .monospacedDigit()
+            }
+            .frame(minWidth: 120, alignment: .trailing)
+
+        case .installing:
+            HStack(spacing: 6) {
+                ProgressView()
+                    .scaleEffect(0.7)
+                    .frame(width: 14, height: 14)
                 Text("Installing...")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
+            .frame(minWidth: 120, alignment: .trailing)
+
         case .success:
             HStack(spacing: 4) {
                 Image(systemName: "checkmark.circle.fill")
@@ -313,16 +351,19 @@ struct WinetricksComponentRow: View {
                     .font(.caption)
                     .foregroundColor(.green)
             }
+
         case .failed(let message):
             HStack(spacing: 4) {
                 Image(systemName: "xmark.circle.fill")
                     .foregroundColor(.red)
                     .font(.system(size: 14))
-                Text("Failed")
-                    .font(.caption)
-                    .foregroundColor(.red)
-                    .help(message)
+                Button("Retry") {
+                    onInstall()
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
             }
+            .help("Failed: \(message)")
         }
     }
 }

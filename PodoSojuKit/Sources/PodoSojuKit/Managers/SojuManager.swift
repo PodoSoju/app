@@ -310,13 +310,90 @@ public final class SojuManager: @unchecked Sendable {
         return try process.runStream(name: "wineserver " + args.joined(separator: " "))
     }
 
-    /// winetricks 실행
+    /// winetricks 실행 (여러 컴포넌트 일괄 설치)
+    /// - Parameters:
+    ///   - workspace: 대상 Workspace
+    ///   - components: 설치할 컴포넌트들 (예: ["vcrun2019", "d3dx9"])
+    ///   - progressHandler: 진행 상황 콜백 (현재 컴포넌트, 완료된 개수)
+    public func runWinetricks(
+        workspace: Workspace,
+        components: [String],
+        progressHandler: (@Sendable (String, Int) -> Void)? = nil
+    ) async throws {
+        try validate()
+
+        guard FileManager.default.fileExists(atPath: winetricksBinary.path) else {
+            throw SojuError.winetricksNotFound
+        }
+
+        guard !components.isEmpty else { return }
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/bash")
+        process.arguments = [winetricksBinary.path, "-q", "--force"] + components
+        process.currentDirectoryURL = workspace.url
+
+        // winetricks용 환경변수 설정
+        var env = constructEnvironment(for: workspace)
+        env["WINE"] = wineBinary.path
+        env["WINESERVER"] = wineserverBinary.path
+        env["PATH"] = "\(binFolder.path):" + (env["PATH"] ?? "/usr/bin:/bin")
+
+        process.environment = env
+        process.qualityOfService = .userInitiated
+
+        let componentsStr = components.joined(separator: ", ")
+        Logger.podoSojuKit.info("🔧 Running winetricks: \(componentsStr)", category: "Soju")
+        Logger.podoSojuKit.debug("WINE=\(wineBinary.path)", category: "Soju")
+        Logger.podoSojuKit.debug("WINESERVER=\(wineserverBinary.path)", category: "Soju")
+
+        var currentIndex = 0
+        progressHandler?(components[0], 0)
+
+        for await output in try process.runStream(name: "winetricks \(componentsStr)") {
+            switch output {
+            case .message(let message):
+                Logger.podoSojuKit.debug("winetricks: \(message)", category: "Soju")
+                // 다음 컴포넌트 시작 감지 (winetricks 출력에서 "Executing" 패턴)
+                for (index, component) in components.enumerated() where index > currentIndex {
+                    if message.contains(component) || message.contains("Executing \(component)") {
+                        currentIndex = index
+                        progressHandler?(component, index)
+                        break
+                    }
+                }
+            case .terminated(let code):
+                if code != 0 {
+                    throw SojuError.winetricksFailed(code)
+                }
+            case .started, .error:
+                break
+            }
+        }
+
+        Logger.podoSojuKit.info("✅ winetricks completed: \(componentsStr)", category: "Soju")
+    }
+
+    /// winetricks 실행 (단일 컴포넌트 - 하위 호환성)
     /// - Parameters:
     ///   - workspace: 대상 Workspace
     ///   - component: 설치할 컴포넌트 (예: "vcrun2019", "d3dx9")
     public func runWinetricks(
         workspace: Workspace,
         component: String
+    ) async throws {
+        try await runWinetricks(workspace: workspace, components: [component])
+    }
+
+    /// winetricks 실행 (단일 컴포넌트 + 진행률 콜백)
+    /// - Parameters:
+    ///   - workspace: 대상 Workspace
+    ///   - component: 설치할 컴포넌트 (예: "vcrun2019", "d3dx9")
+    ///   - onProgress: 진행 상황 콜백 (downloading/installing)
+    public func runWinetricks(
+        workspace: Workspace,
+        component: String,
+        onProgress: @escaping @Sendable (InstallProgress) -> Void
     ) async throws {
         try validate()
 
@@ -339,23 +416,82 @@ public final class SojuManager: @unchecked Sendable {
         process.qualityOfService = .userInitiated
 
         Logger.podoSojuKit.info("🔧 Running winetricks: \(component)", category: "Soju")
-        Logger.podoSojuKit.debug("WINE=\(wineBinary.path)", category: "Soju")
-        Logger.podoSojuKit.debug("WINESERVER=\(wineserverBinary.path)", category: "Soju")
+
+        // 상태 추적 변수
+        let startTime = Date()
+        var lastProgressLogTime = startTime
+        var isDownloading = false
+        var isInstalling = false
+        var lastDownloadPercent = -1
 
         for await output in try process.runStream(name: "winetricks \(component)") {
             switch output {
-            case .message(let message):
-                Logger.podoSojuKit.debug("winetricks: \(message)", category: "Soju")
+            case .message(let message), .error(let message):
+                // 1. 전체 출력 DEBUG 로깅
+                Logger.podoSojuKit.debug("winetricks output: \(message)", category: "Soju")
+
+                // 경과 시간 계산
+                let elapsed = Date().timeIntervalSince(startTime)
+
+                // 3. 5초마다 "running for X seconds" 로깅
+                let timeSinceLastLog = Date().timeIntervalSince(lastProgressLogTime)
+                if timeSinceLastLog >= 5.0 {
+                    let seconds = Int(elapsed)
+                    Logger.podoSojuKit.info("winetricks \(component): running for \(seconds)s...", category: "Soju")
+                    lastProgressLogTime = Date()
+
+                    // 4. 30초 이상 시 경고 로깅
+                    if elapsed >= 30.0 {
+                        Logger.podoSojuKit.warning("winetricks \(component): running for \(seconds)s (long operation)", category: "Soju")
+                    }
+                }
+
+                // wget 진행률 파싱: "50K .......... 45% 2.5M" 패턴
+                // 정규식: 숫자 + % 형식
+                if let range = message.range(of: #"\d+%"#, options: .regularExpression) {
+                    let percentStr = message[range].dropLast() // % 제거
+                    if let percent = Int(percentStr) {
+                        // 2. 다운로드 시작 로깅 (처음 감지 시)
+                        if !isDownloading {
+                            isDownloading = true
+                            Logger.podoSojuKit.info("winetricks \(component): downloading started", category: "Soju")
+                        }
+
+                        // 진행률 변화 로깅 (10% 단위로만)
+                        if percent != lastDownloadPercent && percent % 10 == 0 {
+                            Logger.podoSojuKit.info("winetricks \(component): downloading \(percent)%", category: "Soju")
+                            lastDownloadPercent = percent
+                        }
+
+                        onProgress(.downloading(percent: percent))
+                    }
+                }
+
+                // "Executing wine" 또는 "Running wine" 감지 -> installing
+                if message.contains("Executing wine") || message.contains("Running wine") ||
+                   message.contains("Executing ") && message.contains(component) {
+                    // 2. 설치 시작 로깅 (처음 감지 시)
+                    if !isInstalling {
+                        isInstalling = true
+                        Logger.podoSojuKit.info("winetricks \(component): installing started", category: "Soju")
+                    }
+                    onProgress(.installing)
+                }
+
             case .terminated(let code):
+                let totalElapsed = Int(Date().timeIntervalSince(startTime))
                 if code != 0 {
+                    Logger.podoSojuKit.error("winetricks \(component): failed with code \(code) after \(totalElapsed)s", category: "Soju")
                     throw SojuError.winetricksFailed(code)
                 }
-            case .started, .error:
-                break
+                Logger.podoSojuKit.info("winetricks \(component): terminated with code \(code) after \(totalElapsed)s", category: "Soju")
+            case .started:
+                Logger.podoSojuKit.debug("winetricks \(component): process started", category: "Soju")
             }
         }
 
-        Logger.podoSojuKit.info("✅ winetricks \(component) completed", category: "Soju")
+        let totalElapsed = Int(Date().timeIntervalSince(startTime))
+        Logger.podoSojuKit.info("✅ winetricks completed: \(component) (took \(totalElapsed)s)", category: "Soju")
     }
 
     /// Soju 버전 확인
@@ -912,4 +1048,12 @@ public enum ProcessOutput {
     case message(String)
     case error(String)
     case terminated(Int32)
+}
+
+// MARK: - Install Progress
+
+/// winetricks 설치 진행 상황
+public enum InstallProgress: Sendable {
+    case downloading(percent: Int)
+    case installing
 }
