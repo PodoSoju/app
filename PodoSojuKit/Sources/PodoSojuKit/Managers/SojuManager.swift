@@ -329,13 +329,8 @@ public final class SojuManager: @unchecked Sendable {
         guard !components.isEmpty else { return }
 
         let process = Process()
-        // Use 'script' command via bash to create a pseudo-terminal (pty)
-        // This makes wget output progress information as if connected to a terminal
         process.executableURL = URL(fileURLWithPath: "/bin/bash")
-        let winetricksCmd = ([winetricksBinary.path, "-q", "--force"] + components)
-            .map { $0.contains(" ") ? "'\($0)'" : $0 }
-            .joined(separator: " ")
-        process.arguments = ["-c", "script -q /dev/null \(winetricksCmd)"]
+        process.arguments = [winetricksBinary.path, "-q", "--force"] + components
         process.currentDirectoryURL = workspace.url
 
         // winetricks용 환경변수 설정
@@ -407,11 +402,8 @@ public final class SojuManager: @unchecked Sendable {
         }
 
         let process = Process()
-        // Use 'script' command via bash to create a pseudo-terminal (pty)
-        // This makes wget output progress information as if connected to a terminal
         process.executableURL = URL(fileURLWithPath: "/bin/bash")
-        let escapedPath = winetricksBinary.path.replacingOccurrences(of: " ", with: "\\ ")
-        process.arguments = ["-c", "script -q /dev/null \(escapedPath) -q --force \(component)"]
+        process.arguments = [winetricksBinary.path, "-q", "--force", component]
         process.currentDirectoryURL = workspace.url
 
         // winetricks용 환경변수 설정
@@ -423,7 +415,7 @@ public final class SojuManager: @unchecked Sendable {
         process.environment = env
         process.qualityOfService = .userInitiated
 
-        Logger.podoSojuKit.info("🔧 Running winetricks (with pty): \(component)", category: "Soju")
+        Logger.podoSojuKit.info("🔧 Running winetricks : \(component)", category: "Soju")
 
         // 상태 추적 변수
         let startTime = Date()
