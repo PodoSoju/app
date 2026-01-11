@@ -42,6 +42,30 @@ class AppBundleGenerator {
         }
     }
 
+    /// PodoJuice 버전 조회 (빌드된 바이너리에서)
+    static func getPodoJuiceVersion() -> String {
+        guard let podoJuiceURL = Bundle.main.url(forResource: "PodoJuice", withExtension: nil) else {
+            return "1.0.0"
+        }
+
+        let process = Process()
+        process.executableURL = podoJuiceURL
+        process.arguments = ["--version"]
+
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = FileHandle.nullDevice
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            return String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "1.0.0"
+        } catch {
+            return "1.0.0"
+        }
+    }
+
     /// PodoJuice config.json 구조
     struct JuiceConfig: Codable {
         let workspaceId: String
@@ -132,6 +156,9 @@ class AppBundleGenerator {
         // Bundle identifier 생성
         let bundleId = "com.podosoju.juice.\(sanitizedName.lowercased().replacingOccurrences(of: " ", with: "-")).\(workspaceId.prefix(8))"
 
+        // PodoJuice 버전 (빌드된 바이너리에서 조회)
+        let podoJuiceVersion = Self.getPodoJuiceVersion()
+
         // Info.plist 생성
         var infoPlist: [String: Any] = [
             "CFBundleDevelopmentRegion": "en",
@@ -141,12 +168,13 @@ class AppBundleGenerator {
             "CFBundleName": name,
             "CFBundleDisplayName": name,
             "CFBundlePackageType": "APPL",
-            "CFBundleShortVersionString": "1.0",
+            "CFBundleShortVersionString": podoJuiceVersion,
             "CFBundleVersion": "1",
             "LSMinimumSystemVersion": "13.0",
             "NSHighResolutionCapable": true,
             "LSUIElement": false,  // Dock에 표시
             // 커스텀 키 (포도주스용)
+            "PodoJuiceVersion": podoJuiceVersion,
             "PodoJuiceWorkspaceId": workspaceId,
             "PodoJuiceExePath": exePath,
             "PodoJuiceTargetLnk": targetLnk

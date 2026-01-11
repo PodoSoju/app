@@ -19,6 +19,8 @@ struct ShortcutView: View {
     @State private var errorMessage = ""
     @State private var showDeleteConfirmation = false
     @State private var isSelected = false
+    @State private var showUpdateSuccess = false
+    @State private var updatedVersion = ""
 
     var body: some View {
         VStack(spacing: 8) {
@@ -26,15 +28,22 @@ struct ShortcutView: View {
                 .frame(width: 45, height: 45)
                 .scaleEffect(opening ? 2 : 1)
                 .opacity(opening ? 0 : 1)
-
-            HStack(alignment: .firstTextBaseline, spacing: 3) {
-                if isLoading {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle())
-                        .scaleEffect(0.4)
-                        .frame(width: 8, height: 8)
+                .overlay(alignment: .topTrailing) {
+                    extensionBadge
+                }
+                .overlay {
+                    if isLoading {
+                        ZStack {
+                            Color.black.opacity(0.5)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .scaleEffect(0.8)
+                        }
+                    }
                 }
 
+            HStack(alignment: .firstTextBaseline, spacing: 3) {
                 Text(shortcut.name)
                     .font(.caption)
                     .foregroundStyle(.white)
@@ -66,8 +75,26 @@ struct ShortcutView: View {
                 runProgram()
             }
             Divider()
-            Button("포도주스 만들기", systemImage: "drop.fill") {
-                createAppBundle()
+            if shortcut.url.pathExtension.lowercased() == "app" {
+                // .app은 이미 포도주스 - 버전 표시
+                let appVersion = getAppBundleVersion(shortcut.url)
+                let currentVersion = getCurrentPodoJuiceVersion()
+
+                if appVersion < currentVersion {
+                    Button("포도주스 업데이트 (\(appVersion) → \(currentVersion))", systemImage: "arrow.up.circle") {
+                        isLoading = true
+                        Task {
+                            await updateAppBundleAsync()
+                        }
+                    }
+                } else {
+                    Text("포도주스 v\(appVersion)")
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                Button("포도주스 만들기", systemImage: "drop.fill") {
+                    createAppBundle()
+                }
             }
             Button("Rename", systemImage: "pencil.line") {
                 // TODO: Implement rename functionality
@@ -97,6 +124,11 @@ struct ShortcutView: View {
         } message: {
             Text(errorMessage)
         }
+        .alert("업데이트 완료", isPresented: $showUpdateSuccess) {
+            Button("확인", role: .cancel) { }
+        } message: {
+            Text("포도주스 v\(updatedVersion)으로 업데이트되었습니다.")
+        }
     }
 
     // MARK: - Views
@@ -120,12 +152,43 @@ struct ShortcutView: View {
         }
     }
 
+    /// Extension badge (top-right corner)
+    @ViewBuilder
+    private var extensionBadge: some View {
+        let ext = shortcut.url.pathExtension.lowercased()
+        if !ext.isEmpty {
+            Text(ext)
+                .font(.system(size: 7, weight: .medium))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 2)
+                .padding(.vertical, 1)
+                .background(Color.black.opacity(0.6))
+                .clipShape(RoundedRectangle(cornerRadius: 2))
+                .offset(x: 5, y: -5)
+        }
+    }
+
     // MARK: - Actions
     private func runProgram() {
-        // .app 파일은 직접 실행 (PodoJuice)
+        // 이미 실행 중이면 포커스만 주기
+        if workspace.focusRunningProgram(shortcut.url) {
+            Logger.podoSojuKit.info("Focused existing window: \(shortcut.name)")
+            return
+        }
+
+        // .app 파일은 직접 실행 (PodoJuice) - 인디케이터는 PodoJuice 로딩창이 대체
         if shortcut.url.pathExtension.lowercased() == "app" {
             Logger.podoSojuKit.info("Opening PodoJuice app: \(shortcut.name)")
+            isLoading = true
             NSWorkspace.shared.open(shortcut.url)
+
+            // PodoJuice 로딩창이 처리하므로 1.5초 후 인디케이터 종료
+            Task {
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                await MainActor.run {
+                    isLoading = false
+                }
+            }
             return
         }
 
@@ -190,9 +253,9 @@ struct ShortcutView: View {
                 try await program.run(in: workspace)
                 Logger.podoSojuKit.info("Program started: \(shortcut.name)")
 
-                // 새 Wine 창이 뜰 때까지 대기 (최대 60초)
+                // 새 Wine 창이 뜰 때까지 대기 (최대 30초, 0.5초 간격)
                 for attempt in 1...60 {
-                    try await Task.sleep(nanoseconds: 1_000_000_000)
+                    try await Task.sleep(nanoseconds: 500_000_000)  // 0.5s
 
                     // 내 프로그램의 창이 열렸는지 확인
                     let (found, shouldStop) = await MainActor.run {
@@ -200,7 +263,7 @@ struct ShortcutView: View {
                     }
 
                     if found {
-                        Logger.podoSojuKit.info("✅ Window detected after \(attempt)s: \(shortcut.name)")
+                        Logger.podoSojuKit.info("✅ Window detected after \(Double(attempt) * 0.5)s: \(shortcut.name)")
                         await MainActor.run {
                             workspace.focusRunningProgram(shortcut.url)
                             isLoading = false
@@ -233,9 +296,9 @@ struct ShortcutView: View {
 
     // 대기 중인 프로그램 추적 (static으로 공유)
     private static var pendingLaunches: Set<URL> = []
-    // Stable window detection - require consecutive detections
+    // Stable window detection - require consecutive detections (0.5s * 3 = 1.5s)
     private static var windowStableCounts: [URL: Int] = [:]
-    private static let requiredStableCount = 3  // 3 consecutive detections (3초)
+    private static let requiredStableCount = 3  // 3 consecutive detections (1.5초)
 
     /// 내 프로그램의 창이 열렸는지 확인
     /// - Parameters:
@@ -245,33 +308,7 @@ struct ShortcutView: View {
     private func checkMyWindowOpened(programURL: URL, launchTime: Date) -> (found: Bool, shouldStop: Bool) {
         let exeName = programURL.lastPathComponent
 
-        // 1. .soju/running/ 디렉토리에서 새로 생성된 JSON 파일 확인 (가장 정확)
-        let runningDir = workspace.winePrefixURL.appendingPathComponent(".soju/running")
-        let fileManager = FileManager.default
-
-        if fileManager.fileExists(atPath: runningDir.path) {
-            do {
-                let files = try fileManager.contentsOfDirectory(at: runningDir, includingPropertiesForKeys: [.creationDateKey])
-                for file in files where file.pathExtension == "json" {
-                    // 파일 생성 시간 확인 - launchTime 이후 생성된 파일만
-                    if let attributes = try? fileManager.attributesOfItem(atPath: file.path),
-                       let creationDate = attributes[.creationDate] as? Date,
-                       creationDate >= launchTime {
-                        // JSON 파일 내용 확인
-                        if let data = try? Data(contentsOf: file),
-                           let app = try? JSONDecoder().decode(Workspace.RunningWineApp.self, from: data),
-                           app.exe.lowercased() == exeName.lowercased() {
-                            Logger.podoSojuKit.debug("Found running app via .soju/running (created after launch): \(exeName)", category: "ShortcutView")
-                            return (true, false)
-                        }
-                    }
-                }
-            } catch {
-                Logger.podoSojuKit.warning("Failed to read .soju/running directory: \(error.localizedDescription)", category: "ShortcutView")
-            }
-        }
-
-        // 2. pgrep으로 프로세스 실행 중인지 확인
+        // 1. pgrep으로 프로세스 실행 중인지 확인
         let isRunning = SojuManager.shared.isProcessRunning(exeName: exeName)
         let runningApps = workspace.getRunningWineApps()
 
@@ -417,9 +454,70 @@ struct ShortcutView: View {
             }
         }
 
-        // Fallback: 원래 경로에서 직접 변환
-        return unixPath.replacingOccurrences(of: workspace.winePrefixURL.path, with: "C:")
-            .replacingOccurrences(of: "/", with: "\\")
+        // Fallback: workspace 경로 이후 부분을 C: 경로로 변환
+        if unixPath.hasPrefix(workspacePath) {
+            let afterWorkspace = String(unixPath.dropFirst(workspacePath.count))
+            return "C:" + afterWorkspace.replacingOccurrences(of: "/", with: "\\")
+        }
+
+        // 최후 fallback: 그대로 백슬래시 변환
+        return unixPath.replacingOccurrences(of: "/", with: "\\")
+    }
+
+    // MARK: - Version Helpers
+
+    /// 앱 번들의 PodoJuice 버전 조회 (Info.plist에서)
+    private func getAppBundleVersion(_ appURL: URL) -> String {
+        let plistPath = appURL.appendingPathComponent("Contents/Info.plist")
+        guard let plist = NSDictionary(contentsOf: plistPath),
+              let version = plist["PodoJuiceVersion"] as? String else {
+            return "0.0.0"
+        }
+        return version
+    }
+
+    /// 현재 PodoSoju에 포함된 PodoJuice 버전 (빌드 시 설정)
+    private func getCurrentPodoJuiceVersion() -> String {
+        // PodoSoju 빌드 시 Info.plist에 포함된 버전
+        Bundle.main.object(forInfoDictionaryKey: "PodoJuiceVersion") as? String ?? "1.0.0"
+    }
+
+    /// 앱 번들의 PodoJuice 업데이트 (async)
+    @MainActor
+    private func updateAppBundleAsync() async {
+        guard let podoJuiceURL = Bundle.main.url(forResource: "PodoJuice", withExtension: nil) else {
+            isLoading = false
+            errorMessage = "PodoJuice를 찾을 수 없습니다"
+            showError = true
+            return
+        }
+
+        let targetPath = shortcut.url.appendingPathComponent("Contents/MacOS/PodoJuice")
+        let plistPath = shortcut.url.appendingPathComponent("Contents/Info.plist")
+        let newVersion = AppBundleGenerator.getPodoJuiceVersion()
+
+        do {
+            // 1. PodoJuice 바이너리 업데이트
+            try? FileManager.default.removeItem(at: targetPath)
+            try FileManager.default.copyItem(at: podoJuiceURL, to: targetPath)
+            try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: targetPath.path)
+
+            // 2. Info.plist 버전 업데이트
+            if let plist = NSMutableDictionary(contentsOf: plistPath) {
+                plist["PodoJuiceVersion"] = newVersion
+                plist["CFBundleShortVersionString"] = newVersion
+                plist.write(to: plistPath, atomically: true)
+            }
+
+            isLoading = false
+            updatedVersion = newVersion
+            showUpdateSuccess = true
+            Logger.podoSojuKit.info("Updated PodoJuice to v\(newVersion) in \(shortcut.name)")
+        } catch {
+            isLoading = false
+            errorMessage = "업데이트 실패: \(error.localizedDescription)"
+            showError = true
+        }
     }
 }
 

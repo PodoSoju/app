@@ -244,8 +244,7 @@ struct ShortcutsGridView: View {
             let name = fileURL.deletingPathExtension().lastPathComponent
             let ext = fileURL.pathExtension.lowercased()
 
-            // Skip duplicates, uninstallers, and Wine stubs
-            guard !seenNames.contains(name.lowercased()) else { continue }
+            // Skip uninstallers and Wine stubs
             guard !isUninstaller(name) else { continue }
 
             // For .lnk files, also check Wine stubs
@@ -253,7 +252,10 @@ struct ShortcutsGridView: View {
                 guard !InstallerDetector.isWineStub(fileURL) else { continue }
             }
 
-            seenNames.insert(name.lowercased())
+            // Skip duplicates - but allow .app and .lnk with same name to coexist
+            let uniqueKey = "\(name.lowercased()).\(ext)"
+            guard !seenNames.contains(uniqueKey) else { continue }
+            seenNames.insert(uniqueKey)
 
             // Get icon - for .app, use the app's icon; for .lnk, extract from exe
             var iconURL: URL? = nil
