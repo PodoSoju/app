@@ -338,6 +338,7 @@ public final class SojuManager: @unchecked Sendable {
         env["WINE"] = wineBinary.path
         env["WINESERVER"] = wineserverBinary.path
         env["PATH"] = "\(binFolder.path):" + (env["PATH"] ?? "/usr/bin:/bin")
+        env["TERM"] = "xterm"  // wget 진행률 출력을 위해
 
         process.environment = env
         process.qualityOfService = .userInitiated
@@ -411,6 +412,7 @@ public final class SojuManager: @unchecked Sendable {
         env["WINE"] = wineBinary.path
         env["WINESERVER"] = wineserverBinary.path
         env["PATH"] = "\(binFolder.path):" + (env["PATH"] ?? "/usr/bin:/bin")
+        env["TERM"] = "xterm"  // wget 진행률 출력을 위해
 
         process.environment = env
         process.qualityOfService = .userInitiated
