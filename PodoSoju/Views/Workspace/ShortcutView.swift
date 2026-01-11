@@ -191,6 +191,10 @@ struct ShortcutView: View {
                     }
                 }
                 Logger.podoSojuKit.warning("No window after 60s: \(shortcut.name)")
+                await MainActor.run {
+                    errorMessage = "프로그램이 60초 내에 창을 열지 않았습니다.\n크래시했거나 백그라운드에서 실행 중일 수 있습니다.\n\nCmd+Option+L로 로그를 확인하세요."
+                    showError = true
+                }
             } catch {
                 await MainActor.run {
                     errorMessage = error.localizedDescription
@@ -232,18 +236,9 @@ struct ShortcutView: View {
             }
 
             if ownerName.lowercased().contains("wine") {
-                let windowName = window[kCGWindowName as String] as? String ?? ""
-                let windowNameLower = windowName.lowercased()
-
-                // 창 제목이 프로그램 이름과 매칭되면 확실
-                if !windowNameLower.isEmpty && windowNameLower.contains(programName) {
-                    return (true, false)
-                }
-
-                // 창 제목이 없어도, 대기 중인 프로그램이 하나뿐이면 OK
-                if windowName.isEmpty && Self.pendingLaunches.count == 1 {
-                    return (true, false)
-                }
+                // Wine 창이 있으면 성공으로 간주
+                // (창 이름이 비어있어도 OK - macOS 권한 문제로 가져오지 못할 수 있음)
+                return (true, false)
             }
         }
 

@@ -9,6 +9,34 @@ import Foundation
 import SemanticVersion
 import os.log
 
+// MARK: - Wine Debug Level
+
+/// Wine 디버그 출력 레벨
+public enum WineDebugLevel: String, Codable, CaseIterable {
+    case off = "off"
+    case errorsOnly = "errorsOnly"
+    case warnings = "warnings"
+    case all = "all"
+
+    public var displayName: String {
+        switch self {
+        case .off: return "Off"
+        case .errorsOnly: return "Errors Only"
+        case .warnings: return "Warnings"
+        case .all: return "All (Debug)"
+        }
+    }
+
+    public var wineDebugValue: String {
+        switch self {
+        case .off: return "-all"
+        case .errorsOnly: return "err+all"
+        case .warnings: return "warn+all,fixme-all"
+        case .all: return "+all"
+        }
+    }
+}
+
 // MARK: - Workspace Info
 
 public struct WorkspaceInfo: Codable, Equatable {
@@ -36,6 +64,7 @@ public struct WorkspaceWineConfig: Codable, Equatable {
     var windowsVersion: WinVersion = .win10
     var enhancedSync: EnhancedSync = .msync
     var avxEnabled: Bool = false
+    var wineDebugLevel: WineDebugLevel = .warnings
 
     public init() {}
 
@@ -45,6 +74,7 @@ public struct WorkspaceWineConfig: Codable, Equatable {
         self.windowsVersion = try container.decodeIfPresent(WinVersion.self, forKey: .windowsVersion) ?? .win10
         self.enhancedSync = try container.decodeIfPresent(EnhancedSync.self, forKey: .enhancedSync) ?? .msync
         self.avxEnabled = try container.decodeIfPresent(Bool.self, forKey: .avxEnabled) ?? false
+        self.wineDebugLevel = try container.decodeIfPresent(WineDebugLevel.self, forKey: .wineDebugLevel) ?? .warnings
     }
 }
 
@@ -137,6 +167,11 @@ public struct WorkspaceSettings: Codable, Equatable {
     public var avxEnabled: Bool {
         get { return wineConfig.avxEnabled }
         set { wineConfig.avxEnabled = newValue }
+    }
+
+    public var wineDebugLevel: WineDebugLevel {
+        get { return wineConfig.wineDebugLevel }
+        set { wineConfig.wineDebugLevel = newValue }
     }
 
     public var dxvk: Bool {
@@ -291,5 +326,8 @@ public struct WorkspaceSettings: Codable, Equatable {
         if graphicsConfig.dxrEnabled && graphicsConfig.graphicsBackend != .d3dmetal {
             wineEnv.updateValue("1", forKey: "D3DM_SUPPORT_DXR")
         }
+
+        // WINEDEBUG configuration
+        wineEnv.updateValue(wineConfig.wineDebugLevel.wineDebugValue, forKey: "WINEDEBUG")
     }
 }

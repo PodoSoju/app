@@ -11,6 +11,7 @@ import os.log
 
 struct LogSettingsView: View {
     @ObservedObject private var logConfig = LogConfig.shared
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         Form {
@@ -30,30 +31,41 @@ struct LogSettingsView: View {
             }
 
             Section("Log File") {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Log File Location")
-                            .font(.headline)
-                        Text(Logger.logFileURL.path(percentEncoded: false))
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .lineLimit(2)
-                            .truncationMode(.middle)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Log File Location")
+                        .font(.headline)
+                    Text(Logger.logFileURL.path(percentEncoded: false))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
+                        .truncationMode(.middle)
+                }
+
+                HStack(spacing: 12) {
+                    Button {
+                        clearLogs()
+                    } label: {
+                        Label("Clear Logs", systemImage: "trash")
                     }
+                    .buttonStyle(.bordered)
+                    .foregroundColor(.red)
 
                     Spacer()
 
-                    Button("Open in Finder") {
+                    Button {
                         openLogFile()
+                    } label: {
+                        Label("Open in Finder", systemImage: "folder")
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button {
+                        openWindow(id: "log-window")
+                    } label: {
+                        Label("View Logs", systemImage: "doc.text.magnifyingglass")
                     }
                     .buttonStyle(.borderedProminent)
                 }
-
-                Button("Clear Logs") {
-                    clearLogs()
-                }
-                .buttonStyle(.bordered)
-                .foregroundColor(.red)
             }
         }
         .formStyle(.grouped)

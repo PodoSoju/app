@@ -136,6 +136,22 @@ struct WineSettingsTab: View {
                     set: { workspace.settings.avxEnabled = $0 }
                 ))
             }
+
+            Section("Logging") {
+                Picker("Wine Debug Level", selection: Binding(
+                    get: { workspace.settings.wineDebugLevel },
+                    set: { workspace.settings.wineDebugLevel = $0 }
+                )) {
+                    ForEach(WineDebugLevel.allCases, id: \.self) { level in
+                        Text(level.displayName).tag(level)
+                    }
+                }
+                .help("Set WINEDEBUG level. Use 'All' when debugging crashes.")
+
+                Text("Current: WINEDEBUG=\(workspace.settings.wineDebugLevel.wineDebugValue)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
         }
         .formStyle(.grouped)
     }

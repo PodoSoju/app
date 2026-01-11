@@ -161,15 +161,7 @@ public final class SojuManager: @unchecked Sendable {
         env["TMPDIR"] = containerTmp
         Logger.podoSojuKit.debug("TMPDIR set to: \(containerTmp)", category: "Soju")
 
-        // Wine 디버그 출력 설정
-        #if DEBUG
-        // Debug 빌드: 상세한 디버그 출력
-        env["WINEDEBUG"] = "+all"
-        Logger.podoSojuKit.debug("Wine debug mode enabled: +all", category: "Soju")
-        #else
-        // Release 빌드: 경고만 표시 (fixme 제외)
-        env["WINEDEBUG"] = "warn+all,fixme-all"
-        #endif
+        // WINEDEBUG는 workspace.settings.environmentVariables()에서 설정됨
 
         // GStreamer 로그 설정 (2 = 경고 및 에러만)
         env["GST_DEBUG"] = "2"

@@ -51,6 +51,13 @@ struct PodoSojuApp: App {
                 .keyboardShortcut(",", modifiers: .command)
             }
         }
+
+        // 로그 창 (별도 윈도우)
+        Window("Wine Logs", id: "log-window") {
+            LogWindowView()
+        }
+        .defaultSize(width: 800, height: 600)
+        .keyboardShortcut("l", modifiers: [.command, .option])
     }
 }
 
