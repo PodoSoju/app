@@ -79,10 +79,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             WineAppMonitor.shared.startMonitoring()
         }
 
-        // 메인 윈도우에 delegate 설정
+        // 메인 윈도우에 delegate 설정 + Wine Logs 창 닫기
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            if let window = NSApp.windows.first(where: { $0.isVisible && $0.title != "Wine Logs" }) {
-                window.delegate = self
+            for window in NSApp.windows {
+                if window.title == "Wine Logs" {
+                    window.close()  // Wine Logs 창은 기본으로 닫기
+                } else if window.isVisible {
+                    window.delegate = self
+                }
             }
         }
 

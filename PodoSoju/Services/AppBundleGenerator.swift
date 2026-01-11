@@ -112,22 +112,23 @@ class AppBundleGenerator {
             throw GeneratorError.writePlistFailed(plistURL.path)
         }
 
-        // launcher 스크립트 생성
-        // PodoSoju가 이미 실행 중이면 URL만 전달, 아니면 실행
+        // launcher 스크립트 생성 - AppleScript로 PodoSoju URL scheme 실행
+        // osascript를 사용하여 검은 터미널 창 없이 실행
         let launcherScript = """
-        #!/bin/bash
-        URL="\(launchURL)"
+        #!/usr/bin/osascript
 
-        # PodoSoju가 실행 중인지 확인
-        if pgrep -x "PodoSoju" > /dev/null; then
-            # 이미 실행 중 - URL만 전달
-            open "$URL"
-        else
-            # 실행 중 아님 - PodoSoju 먼저 실행하고 URL 전달
-            open -a "PodoSoju"
-            sleep 1
-            open "$URL"
-        fi
+        -- PodoSoju 앱이 실행 중인지 확인하고 없으면 실행
+        tell application "System Events"
+            set isRunning to (exists (processes where name is "PodoSoju"))
+        end tell
+
+        if not isRunning then
+            tell application "PodoSoju" to activate
+            delay 1
+        end if
+
+        -- URL scheme으로 Wine 앱 실행
+        open location "\(launchURL)"
         """
 
         let launcherURL = macOSURL.appendingPathComponent("launcher")
