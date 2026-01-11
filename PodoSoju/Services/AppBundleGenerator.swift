@@ -113,9 +113,10 @@ class AppBundleGenerator {
         }
 
         // launcher 스크립트 생성 (open 명령으로 URL scheme 호출)
+        // -g: background에서 열기 (기존 앱에 URL 전달, 새 창 안 띄움)
         let launcherScript = """
         #!/bin/bash
-        open "\(launchURL)"
+        open -g "\(launchURL)"
         """
 
         let launcherURL = macOSURL.appendingPathComponent("launcher")
