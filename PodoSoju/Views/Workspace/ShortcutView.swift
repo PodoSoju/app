@@ -236,9 +236,22 @@ struct ShortcutView: View {
             }
 
             if ownerName.lowercased().contains("wine") {
-                // Wine 창이 있으면 성공으로 간주
-                // (창 이름이 비어있어도 OK - macOS 권한 문제로 가져오지 못할 수 있음)
-                return (true, false)
+                let windowName = window[kCGWindowName as String] as? String ?? ""
+                let windowNameLower = windowName.lowercased()
+
+                // 창 제목이 프로그램 이름을 포함하면 내 프로그램
+                if !windowNameLower.isEmpty && windowNameLower.contains(programName) {
+                    Logger.podoSojuKit.debug("Found my window: '\(windowName)' matches '\(programName)'", category: "ShortcutView")
+                    return (true, false)
+                }
+
+                // 창 제목이 비어있으면 (권한 문제) - 대기 중인 프로그램이 하나뿐이면 OK
+                if windowNameLower.isEmpty && Self.pendingLaunches.count == 1 {
+                    Logger.podoSojuKit.debug("Found Wine window with empty title, assuming mine (only 1 pending)", category: "ShortcutView")
+                    return (true, false)
+                }
+
+                // Wine 창은 있지만 내 프로그램인지 확실하지 않음 - 계속 탐색
             }
         }
 
